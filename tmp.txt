@@ -1,0 +1,32 @@
+{
+  "designation": "piscine gonflable",
+  "description": "piscine gonflable extérieure ultra résistante avec bache de protection & filtre + chauffeur électrique"
+}
+
+{
+  "designation": "carte dracaufeu ex shiny v0 9/10",
+  "description": "Edition limité, très bon état, estimation officiel 138€"
+}
+
+{
+  "designation": "l'odyssée de homère",
+  "description": "version collector limité originale de l'odyssée, autographié par jk rowling. Excellent état. Kit d'entretien de la couverture inclus (couverture en bois peint)"
+}
+
+
+
+
+[
+  {
+    "designation": "piscine gonflable",
+    "description": "piscine gonflable extérieure ultra résistante avec bache de protection & filtre + chauffeur électrique"
+  },
+  {
+    "designation": "carte dracaufeu ex shiny v0 9/10",
+    "description": "Edition limité, très bon état, estimation officiel 138€"
+  },
+  {
+    "designation": "l'odyssée de homère",
+    "description": "version collector limité originale de l'odyssée, autographié par jk rowling. Excellent état. Kit d'entretien de la couverture inclus (couverture en bois peint)"
+  }
+]

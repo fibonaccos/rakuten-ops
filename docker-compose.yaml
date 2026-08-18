@@ -1,0 +1,109 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.15.1
+    container_name: ${RAKUTEN__INFERENCE__MLFLOW_HOST}
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./tracking:/mlflow/tracking
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: "localhost:5001,${RAKUTEN__API__MLFLOW_HOST}:${RAKUTEN__API__MLFLOW_PORT}"
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - "sqlite:///mlflow/tracking/mlflow.db"
+      - --artifacts-destination
+      - "/mlflow/tracking/experiments"
+      - --serve-artifacts
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://0.0.0.0:${RAKUTEN__API__MLFLOW_PORT}/health')"
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+  database:
+    image: postgres:16
+    container_name: ${RAKUTEN__API__DATABASE_HOST}
+    networks:
+      - backend
+    volumes:
+      - rakuten_postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./scripts/create-api-user.sh:/docker-entrypoint-initdb.d/02-create-api-user.sh:ro
+    environment:
+      POSTGRES_DB: ${RAKUTEN__DATABASE__NAME}
+      POSTGRES_USER: ${RAKUTEN__DATABASE__USER}
+      POSTGRES_PASSWORD: ${RAKUTEN__DATABASE__PASSWORD}
+      RAKUTEN__API__DATABASE_USER: ${RAKUTEN__API__DATABASE_USER}
+      RAKUTEN__API__DATABASE_PASSWORD: ${RAKUTEN__API__DATABASE_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+  inference:
+    container_name: ${RAKUTEN__API__INFERENCE_HOST}
+    image: fibonaccos/rakuten-inference:0.1.0
+    networks:
+      - backend
+    env_file:
+      - ".env"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://0.0.0.0:$${RAKUTEN__INFERENCE__PORT}/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: unless-stopped
+  api:
+    image: fibonaccos/rakuten-api:0.1.0
+    container_name: api-service
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ".env"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://0.0.0.0:$${RAKUTEN__API__PORT}/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      database:
+        condition: service_healthy
+      inference:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  backend:
+    name: backend_rakuten_network
+    driver: bridge
+    internal: true
+  frontend:
+    name: frontend_rakuten_network
+    driver: bridge
+
+volumes:
+  rakuten_postgres_data:

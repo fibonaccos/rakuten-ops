@@ -1,0 +1,60 @@
+[project]
+name = "rakuten-mlops"
+version = "0.1.0"
+description = "Inference platform for Rakuten's products classification"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+api = [
+    "asyncpg>=0.31.0",
+    "bcrypt>=5.0.0",
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
+    "mlflow>=3.15.1",
+    "prometheus-client>=0.26.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.15.0",
+    "python-jose>=3.5.0",
+    "python-multipart>=0.0.32",
+    "sqlalchemy>=2.0.52",
+    "uvicorn>=0.52.3",
+]
+inference = [
+    "fastapi>=0.141.1",
+    "keras>=3.15.1",
+    "lxml>=6.1.1",
+    "mlflow>=3.15.1",
+    "numpy>=2.5.2",
+    "prometheus-client>=0.26.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.15.0",
+    "scikit-learn>=1.9.0",
+    "sentence-transformers>=5.7.0",
+    "uvicorn>=0.52.3",
+]
+ml = [
+    "joblib>=1.5.3",
+    "keras>=3.15.1",
+    "lxml>=6.1.1",
+    "mlflow>=3.15.1",
+    "numpy>=2.5.2",
+    "pandas<3.0.0",
+    "python-box>=7.4.1",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "scikit-learn>=1.9.0",
+    "sentence-transformers>=5.7.0",
+]
+
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
