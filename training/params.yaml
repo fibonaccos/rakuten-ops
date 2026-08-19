@@ -18,9 +18,9 @@ features:
     metadata: "data/features/metadata.json"
   split:
     target: "prdtypecode"
-    n_use: -1
+    n_use: 10000
     train_size: 0.8
-    random_state: 42
+    random_state: 73
   product_id: "productid"
   embedding:
     columns:

@@ -1,4 +1,26 @@
 services:
+  database:
+    image: postgres:16
+    container_name: ${RAKUTEN__API__DATABASE_HOST}
+    networks:
+      - backend
+    volumes:
+      - rakuten_postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./scripts/create-api-user.sh:/docker-entrypoint-initdb.d/02-create-api-user.sh:ro
+    environment:
+      POSTGRES_DB: ${RAKUTEN__DATABASE__NAME}
+      POSTGRES_USER: ${RAKUTEN__DATABASE__USER}
+      POSTGRES_PASSWORD: ${RAKUTEN__DATABASE__PASSWORD}
+      RAKUTEN__API__DATABASE_USER: ${RAKUTEN__API__DATABASE_USER}
+      RAKUTEN__API__DATABASE_PASSWORD: ${RAKUTEN__API__DATABASE_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.15.1
     container_name: ${RAKUTEN__INFERENCE__MLFLOW_HOST}
@@ -33,28 +55,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
-    restart: unless-stopped
-  database:
-    image: postgres:16
-    container_name: ${RAKUTEN__API__DATABASE_HOST}
-    networks:
-      - backend
-    volumes:
-      - rakuten_postgres_data:/var/lib/postgresql/data
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-      - ./scripts/create-api-user.sh:/docker-entrypoint-initdb.d/02-create-api-user.sh:ro
-    environment:
-      POSTGRES_DB: ${RAKUTEN__DATABASE__NAME}
-      POSTGRES_USER: ${RAKUTEN__DATABASE__USER}
-      POSTGRES_PASSWORD: ${RAKUTEN__DATABASE__PASSWORD}
-      RAKUTEN__API__DATABASE_USER: ${RAKUTEN__API__DATABASE_USER}
-      RAKUTEN__API__DATABASE_PASSWORD: ${RAKUTEN__API__DATABASE_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
     restart: unless-stopped
   inference:
     container_name: ${RAKUTEN__API__INFERENCE_HOST}

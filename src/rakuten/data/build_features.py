@@ -404,11 +404,11 @@ def build() -> None:
         X_train_scaled, X_test_scaled, params.product_id, params.pca.n_components
     )
 
-    save(X_train_reduced, str(CONFIG_DIR / params.output / "x_train.parquet"))
-    save(X_test_reduced, str(CONFIG_DIR / params.output / "x_test.parquet"))
+    save(X_train_reduced, str(CONFIG_DIR / params.output.folder / "x_train.parquet"))
+    save(X_test_reduced, str(CONFIG_DIR / params.output.folder / "x_test.parquet"))
 
-    save(y_train, str(CONFIG_DIR / params.output / "y_train.parquet"))
-    save(y_test, str(CONFIG_DIR / params.output / "y_test.parquet"))
+    save(y_train, str(CONFIG_DIR / params.output.folder / "y_train.parquet"))
+    save(y_test, str(CONFIG_DIR / params.output.folder / "y_test.parquet"))
 
     with open(CONFIG_DIR / params.scale.artifact, "wb") as f:
         joblib.dump(sc, f)
@@ -431,7 +431,7 @@ def build() -> None:
             "explained_variance": pca.explained_variance_ratio_.sum()
         }
     }
-    with open(CONFIG_DIR / params.output / "metadata.json", "w") as f:
+    with open(CONFIG_DIR / params.output.metadata, "w") as f:
         json.dump(metadata, f, indent=2)
 
     return None
