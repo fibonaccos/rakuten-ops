@@ -68,7 +68,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 7s
     depends_on:
       mlflow:
         condition: service_healthy
@@ -84,11 +84,11 @@ services:
     env_file:
       - ".env"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://0.0.0.0:$${RAKUTEN__API__PORT}/health"]
+      test: ["CMD-SHELL", "curl -f http://0.0.0.0:8000/health"]
       interval: 10s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 5s
     depends_on:
       database:
         condition: service_healthy
@@ -106,11 +106,37 @@ services:
     volumes:
       - ./monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 3s
     depends_on:
       inference:
         condition: service_healthy
       api:
         condition: service_healthy
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana:13.0.7
+    container_name: grafana-service
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${RAKUTEN__GRAFANA__USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${RAKUTEN__GRAFANA__PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
 
 networks:
   backend:
@@ -124,3 +150,4 @@ networks:
 volumes:
   rakuten_postgres_data:
   prometheus_data:
+  grafana_data:

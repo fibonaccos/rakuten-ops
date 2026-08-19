@@ -12,9 +12,6 @@ class Settings(BaseSettings):
         frozen=True,
         str_strip_whitespace=True
     )
-
-    port: int = Field(default=..., description="Port on which the API runs.")
-
     jwt_algorithm: str = Field(default=..., description="JWT algorithm.")
     jwt_secret: Secret[str] = Field(default=..., description="JWT secret.")
     jwt_expiration_in_minutes: int = Field(default=..., description="Lifetime of a JWT token in minutes.")
