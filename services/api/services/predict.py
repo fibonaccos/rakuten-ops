@@ -48,13 +48,13 @@ async def request_predict_batch(inputs: list[dict[str, str | None]]):
         async with httpx.AsyncClient() as client:
             response = (await client.post(
                 url=_INFERENCE_PREDICT_BATCH_ENDPOINT,
-                json={f"{i}": x for i, x in enumerate(inputs)}
+                json=inputs
             )).raise_for_status()
         result = response.json()
     except httpx.HTTPStatusError as e:
         detail = {
             "message": "An error occured in the inference service.",
-            "error": dict(e.response.json())
+            "error": e
         }
         raise HTTPException(status_code=e.response.status_code, detail=detail)
     except httpx.RequestError as e:

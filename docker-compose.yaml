@@ -95,6 +95,22 @@ services:
       inference:
         condition: service_healthy
     restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:v3
+    container_name: prometheus-service
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      inference:
+        condition: service_healthy
+      api:
+        condition: service_healthy
 
 networks:
   backend:
@@ -107,3 +123,4 @@ networks:
 
 volumes:
   rakuten_postgres_data:
+  prometheus_data:

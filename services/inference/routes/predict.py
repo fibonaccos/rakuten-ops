@@ -47,16 +47,14 @@ async def predict_single(
         INFERENCE_REQUESTS.labels(
             mode="single",
             model=model_info["name"] + "-" + model_info["version"],
-            status="success",
-            category=category
+            status="success"
         ).inc()
         return response
     except Exception:
         INFERENCE_REQUESTS.labels(
             mode="single",
             model=model_info["name"] + "-" + model_info["version"],
-            status="failure",
-            category="NULL"
+            status="failure"
         ).inc()
         raise
     finally:
@@ -114,8 +112,7 @@ async def predict_batch(
         INFERENCE_REQUESTS.labels(
             mode="batch",
             model=model_info["name"] + "-" + model_info["version"],
-            status="failure",
-            category="NULL"
+            status="failure"
         ).inc()
         raise
     finally:
