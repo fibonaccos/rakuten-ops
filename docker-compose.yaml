@@ -104,7 +104,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     depends_on:
       inference:
