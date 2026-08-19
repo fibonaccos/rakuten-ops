@@ -106,7 +106,7 @@ def clean() -> None:
     """
 
     CONFIG_DIR = Path(__file__).parent.parent.parent.parent
-    params: Box = Box(load_params(str(CONFIG_DIR / "config" / "params.yaml"))).clean
+    params: Box = Box(load_params(str(CONFIG_DIR / "training" / "params.yaml"))).clean
 
     df: pd.DataFrame = load(CONFIG_DIR / params.input, format="csv")
 

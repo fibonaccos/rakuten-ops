@@ -366,7 +366,7 @@ def build() -> None:
     """
 
     CONFIG_DIR = Path(__file__).parent.parent.parent.parent
-    params: Box = Box(load_params(str(CONFIG_DIR / "config" / "params.yaml"))).features
+    params: Box = Box(load_params(str(CONFIG_DIR / "training" / "params.yaml"))).features
 
     X_train, X_test, y_train, y_test = split(
         str(CONFIG_DIR / params.input),
