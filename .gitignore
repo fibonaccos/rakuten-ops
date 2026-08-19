@@ -1,8 +1,9 @@
 .venv
-artifacts
-data
-scripts/passwords.md
-tracking
+/artifacts
+/data
+
+./scripts/passwords.md
+/tracking/*
 __pycache__
 
 # Byte-compiled / optimized / DLL files
