@@ -1,7 +1,7 @@
 .venv
 /artifacts
 /data
-
+/tracking
 ./scripts/passwords.md
 /tracking/*
 __pycache__
