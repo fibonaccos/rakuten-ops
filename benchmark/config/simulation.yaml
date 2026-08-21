@@ -1,0 +1,33 @@
+run:
+  users: 40
+  spawn_rate: 0.3
+  run_time: "5h30m"
+
+population:
+  legit_light: 7
+  legit_moderate: 10
+  legit_heavy: 4
+  unauthenticated: 2
+  unregistered: 1
+  expired_token: 2
+  unauthorized_route: 3
+
+wait_time:
+  legit_light:        {mean: 45, sigma: 0.6}
+  legit_moderate:      {mean: 12, sigma: 0.5}
+  legit_heavy:         {mean: 2.5, sigma: 0.4}
+  unauthenticated:     {mean: 20, sigma: 0.6}
+  unregistered:        {mean: 35, sigma: 0.5}
+  expired_token:       {mean: 15, sigma: 0.5}
+  unauthorized_route:  {mean: 14, sigma: 0.5}
+
+restricted_routes:
+  - "/models"
+  - "/predict/batch"
+
+unregistered_usernames:
+  - {username: "ghost01", password: "Ghost01@123!"}
+  - {username: "ghost02", password: "Ghost02@123!"}
+  - {username: "ghost03", password: "Ghost03@123!"}
+  - {username: "ghost04", password: "Ghost04@123!"}
+  - {username: "ghost05", password: "Ghost05@123!"}

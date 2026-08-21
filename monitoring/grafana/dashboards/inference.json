@@ -65,7 +65,9 @@
         },
         "orientation": "auto",
         "textMode": "auto",
-        "colorMode": "value"
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
       }
     },
     {
@@ -103,15 +105,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34D399",
                 "value": null
               },
               {
-                "color": "yellow",
+                "color": "#FBBF24",
                 "value": 1
               },
               {
-                "color": "red",
+                "color": "#F87171",
                 "value": 5
               }
             ]
@@ -129,7 +131,9 @@
         },
         "orientation": "auto",
         "textMode": "auto",
-        "colorMode": "value"
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
       }
     },
     {
@@ -176,7 +180,9 @@
         },
         "orientation": "auto",
         "textMode": "auto",
-        "colorMode": "value"
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
       }
     },
     {
@@ -223,7 +229,9 @@
         },
         "orientation": "auto",
         "textMode": "auto",
-        "colorMode": "value"
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
       }
     },
     {
@@ -256,17 +264,26 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "smooth",
+            "axisGridShow": true
+          }
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi",
+          "mode": "single",
           "sort": "desc"
         }
       }
@@ -301,24 +318,33 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "smooth",
+            "axisGridShow": true
+          }
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi",
+          "mode": "single",
           "sort": "desc"
         }
       }
     },
     {
       "id": 15,
-      "title": "Latency by model \u2014 P95",
+      "title": "Latency by model — P95",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
@@ -346,17 +372,26 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "smooth",
+            "axisGridShow": true
+          }
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "multi",
+          "mode": "single",
           "sort": "desc"
         }
       }
@@ -459,7 +494,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Inference \u2014 Models / Latency",
+  "title": "Inference — Models / Latency",
   "uid": "inference",
   "version": 1,
   "weekStart": ""

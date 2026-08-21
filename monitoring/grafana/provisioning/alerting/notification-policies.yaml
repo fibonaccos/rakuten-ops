@@ -1,0 +1,23 @@
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: email-ops
+    group_by: ["alertname", "job"]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: email-ops
+        matchers:
+          - severity = critical
+        group_wait: 10s
+        repeat_interval: 1h
+        continue: false
+
+      - receiver: email-ops
+        matchers:
+          - severity = warning
+        group_wait: 1m
+        repeat_interval: 6h
+        continue: false

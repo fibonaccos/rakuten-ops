@@ -7,7 +7,7 @@ services:
     volumes:
       - rakuten_postgres_data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-      - ./scripts/create-api-user.sh:/docker-entrypoint-initdb.d/02-create-api-user.sh:ro
+      - ./scripts/create-users.sh:/docker-entrypoint-initdb.d/02-create-users.sh:ro
     environment:
       POSTGRES_DB: ${RAKUTEN__DATABASE__NAME}
       POSTGRES_USER: ${RAKUTEN__DATABASE__USER}
@@ -21,6 +21,7 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.15.1
     container_name: ${RAKUTEN__INFERENCE__MLFLOW_HOST}
@@ -56,6 +57,7 @@ services:
       retries: 3
       start_period: 5s
     restart: unless-stopped
+
   inference:
     container_name: ${RAKUTEN__API__INFERENCE_HOST}
     image: fibonaccos/rakuten-inference:0.1.0
@@ -73,6 +75,7 @@ services:
       mlflow:
         condition: service_healthy
     restart: unless-stopped
+
   api:
     image: fibonaccos/rakuten-api:0.1.0
     container_name: api-service
@@ -95,14 +98,30 @@ services:
       inference:
         condition: service_healthy
     restart: unless-stopped
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: blackbox-exporter-service
+    networks:
+      - backend
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    restart: unless-stopped
+
+  docker-exporter:
+    image: ghcr.io/dlepaux/docker-exporter:1.5.1
+    container_name: docker-exporter-service
+    networks:
+      - backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # lecture seule, aucun accès host filesystem
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v3
     container_name: prometheus-service
     networks:
-      - frontend
       - backend
-    ports:
-      - "9090:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -117,7 +136,10 @@ services:
         condition: service_healthy
       api:
         condition: service_healthy
+      blackbox-exporter:
+        condition: service_started
     restart: unless-stopped
+
   grafana:
     image: grafana/grafana:13.0.7
     container_name: grafana-service
@@ -129,6 +151,16 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${RAKUTEN__GRAFANA__USER}
       GF_SECURITY_ADMIN_PASSWORD: ${RAKUTEN__GRAFANA__PASSWORD}
+      GF_METRICS_ENABLED: "true"
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: ${RAKUTEN__GRAFANA__SMTP_HOST}
+      GF_SMTP_USER: ${RAKUTEN__GRAFANA__SMTP_USER}
+      GF_SMTP_PASSWORD: ${RAKUTEN__GRAFANA__SMTP_PASSWORD}
+      GF_SMTP_FROM_ADDRESS: ${RAKUTEN__GRAFANA__SMTP_FROM_ADDRESS}
+      GF_SMTP_FROM_NAME: "Rakuten - Grafana Alerting"
+      GF_SMTP_SKIP_VERIFY: "false"
+      ALERT_EMAIL_PRIMARY: ${RAKUTEN__GRAFANA__ALERTING_EMAIL_PRIMARY}
+      ALERT_EMAIL_SECONDARY: ${RAKUTEN__GRAFANA__ALERTING_EMAIL_SECONDARY}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -137,6 +169,31 @@ services:
       prometheus:
         condition: service_healthy
     restart: unless-stopped
+
+  locust:
+    image: fibonaccos/rakuten-locust:0.1.0
+    container_name: "locust-service"
+    networks:
+      - frontend
+      - backend
+    environment:
+      SIMULATION_CONFIG: ${RAKUTEN__LOCUST__SIMULATION_CONFIG}
+      DATA_FILE: ${RAKUTEN__LOCUST__DATA_FILE}
+      DATABASE_URL: postgresql://${RAKUTEN__LOCUST__DATABASE_USER}:${RAKUTEN__LOCUST__DATABASE_PASSWORD}@${RAKUTEN__LOCUST__DATABASE_HOST}:${RAKUTEN__LOCUST__DATABASE_PORT}/${RAKUTEN__LOCUST__DATABASE_NAME}
+      PASSWORD_FILE: ${RAKUTEN__LOCUST__PASSWORDS_FILE}
+      TARGET_BASE_URL: http://api-service:8000
+    volumes:
+      - ./benchmark/config:/benchmark/config:ro
+      - ./benchmark/data:/benchmark/data:ro
+      - ./benchmark/reports:/benchmark/reports
+    depends_on:
+      database:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    profiles:
+      - locust
+
 
 networks:
   backend:

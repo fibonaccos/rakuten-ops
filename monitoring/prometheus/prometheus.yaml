@@ -4,14 +4,58 @@ global:
 scrape_configs:
   - job_name: prometheus
     static_configs:
-      - targets: ["localhost:9090"]
+      - targets:
+        - localhost:9090
 
   - job_name: api
     metrics_path: "/metrics"
     static_configs:
-      - targets: ["api-service:8000"]
+      - targets:
+        - api-service:8000
 
   - job_name: inference
     metrics_path: "/metrics"
     static_configs:
-      - targets: ["inference-service:8000"]
+      - targets:
+        - inference-service:8000
+
+  - job_name: grafana
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+        - grafana-service:3000
+
+  - job_name: blackbox_http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://mlflow-service:5000/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: blackbox_tcp
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+          - db-service:5432
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: docker_exporter
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["docker-exporter-service:9713"]

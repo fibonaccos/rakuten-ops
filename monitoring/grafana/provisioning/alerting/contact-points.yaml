@@ -1,0 +1,12 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: email-ops
+    receivers:
+      - uid: email-ops-receiver
+        type: email
+        settings:
+          addresses: "$ALERT_EMAIL_PRIMARY;$ALERT_EMAIL_SECONDARY"
+          singleEmail: false
+        disableResolveMessage: false

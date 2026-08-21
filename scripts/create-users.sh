@@ -24,4 +24,17 @@ GRANT USAGE, SELECT
 ON SEQUENCE inference_inference_id_seq
 TO :"api_user";
 
+
+CREATE USER :"locust_user" WITH PASSWORD :'locust_password';
+
+GRANT USAGE ON SCHEMA public TO :"locust_user";
+
+GRANT SELECT
+ON TABLE users
+TO :"locust_user";
+
+GRANT USAGE, SELECT
+ON SEQUENCE inference_inference_id_seq
+TO :"locust_user";
+
 SQL

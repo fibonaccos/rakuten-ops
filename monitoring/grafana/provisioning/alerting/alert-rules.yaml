@@ -1,0 +1,142 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: infra-status
+    folder: Infra
+    interval: 30s
+
+    rules:
+      - uid: rule-up-down
+        title: "Service down (scrape Prometheus)"
+        condition: C
+        for: 1m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: 'up'
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+              refId: C
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "{{ $labels.job }} ne répond plus au scrape Prometheus"
+          description: "Métrique up = {{ $values.A }} pour le job {{ $labels.job }} (instance {{ $labels.instance }})"
+          __dashboardUid__: "infra"
+          __panelId__: "107"
+        noDataState: Alerting
+        execErrState: Alerting
+
+      - uid: rule-probe-down
+        title: "Service down (sonde blackbox)"
+        condition: C
+        for: 1m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: 'probe_success'
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+              refId: C
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "{{ $labels.instance }} injoignable (sonde {{ $labels.job }})"
+          description: "probe_success = {{ $values.A }} pour {{ $labels.instance }}"
+        noDataState: Alerting
+        execErrState: Alerting
+
+  - orgId: 1
+    name: latency
+    folder: Infra
+    interval: 1m
+
+    rules:
+      - uid: rule-gateway-p95-latency
+        title: "Gateway - P95 latency élevée"
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: 'histogram_quantile(0.95, sum by (le) (rate(http_requests_duration_seconds_bucket[5m])))'
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1] }
+              refId: C
+        labels:
+          severity: warning
+          category: latency
+          service: gateway
+        annotations:
+          summary: "P95 latence gateway au-dessus du seuil depuis 5 min"
+          description: "P95 actuelle : {{ $values.A }}s"
+        noDataState: NoData
+        execErrState: Error
+
+      - uid: rule-inference-p95-latency
+        title: "Inference - P95 latency élevée"
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: 'histogram_quantile(0.95, sum by (le) (rate(inference_duration_seconds_bucket[5m])))'
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [2] }
+              refId: C
+        labels:
+          severity: warning
+          category: latency
+          service: inference
+        annotations:
+          summary: "P95 latence inference au-dessus du seuil depuis 5 min"
+          description: "P95 actuelle : {{ $values.A }}s"
+        noDataState: NoData
+        execErrState: Error
