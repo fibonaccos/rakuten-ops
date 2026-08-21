@@ -181,15 +181,15 @@ class LegitBaseUser(RakutenUser):
     def predict_single(self):
         self._protected_call("POST", "/predict/single", json=sample_one(), name="/predict/single")
 
-    @task(8)
+    @task(3)
     def predict_batch(self):
         self._protected_call("POST", "/predict/batch", json=sample_batch(), name="/predict/batch")
 
-    @task(6)
+    @task(2)
     def check_profile(self):
         self._protected_call("GET", "/auth/me", name="/auth/me")
 
-    @task(2)
+    @task(1)
     def browse_models(self):
         self._protected_call("GET", "/models", name="/models")
 

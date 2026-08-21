@@ -1,21 +1,21 @@
 run:
-  users: 40
+  users: 45
   spawn_rate: 0.3
   run_time: "5h30m"
 
 population:
-  legit_light: 7
+  legit_light: 4
   legit_moderate: 10
-  legit_heavy: 4
+  legit_heavy: 5
   unauthenticated: 2
   unregistered: 1
   expired_token: 2
   unauthorized_route: 3
 
 wait_time:
-  legit_light:        {mean: 45, sigma: 0.6}
-  legit_moderate:      {mean: 12, sigma: 0.5}
-  legit_heavy:         {mean: 2.5, sigma: 0.4}
+  legit_light:        {mean: 40, sigma: 0.6}
+  legit_moderate:      {mean: 10, sigma: 0.5}
+  legit_heavy:         {mean: 2, sigma: 0.4}
   unauthenticated:     {mean: 20, sigma: 0.6}
   unregistered:        {mean: 35, sigma: 0.5}
   expired_token:       {mean: 15, sigma: 0.5}
@@ -23,6 +23,7 @@ wait_time:
 
 restricted_routes:
   - "/models"
+  - "/models/current"
   - "/predict/batch"
 
 unregistered_usernames:

@@ -20,12 +20,20 @@ groups:
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
+          - refId: B
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
           - refId: C
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: "__expr__"
             model:
               type: threshold
-              expression: A
+              expression: B
               conditions:
                 - evaluator: { type: lt, params: [1] }
               refId: C
@@ -34,12 +42,11 @@ groups:
           category: availability
         annotations:
           summary: "{{ $labels.job }} ne répond plus au scrape Prometheus"
-          description: "Métrique up = {{ $values.A }} pour le job {{ $labels.job }} (instance {{ $labels.instance }})"
+          description: "Métrique up = {{ $values.B }} pour le job {{ $labels.job }} (instance {{ $labels.instance }})"
           __dashboardUid__: "infra"
           __panelId__: "107"
         noDataState: Alerting
         execErrState: Alerting
-
       - uid: rule-probe-down
         title: "Service down (sonde blackbox)"
         condition: C
@@ -53,12 +60,20 @@ groups:
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
+          - refId: B
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
           - refId: C
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: "__expr__"
             model:
               type: threshold
-              expression: A
+              expression: B
               conditions:
                 - evaluator: { type: lt, params: [1] }
               refId: C
@@ -67,7 +82,7 @@ groups:
           category: availability
         annotations:
           summary: "{{ $labels.instance }} injoignable (sonde {{ $labels.job }})"
-          description: "probe_success = {{ $values.A }} pour {{ $labels.instance }}"
+          description: "probe_success = {{ $values.B }} pour {{ $labels.instance }}"
         noDataState: Alerting
         execErrState: Alerting
 
@@ -77,6 +92,7 @@ groups:
     interval: 1m
 
     rules:
+
       - uid: rule-gateway-p95-latency
         title: "Gateway - P95 latency élevée"
         condition: C
@@ -90,14 +106,22 @@ groups:
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
+          - refId: B
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
           - refId: C
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: "__expr__"
             model:
               type: threshold
-              expression: A
+              expression: B
               conditions:
-                - evaluator: { type: gt, params: [1] }
+                - evaluator: { type: gt, params: [0.5] }
               refId: C
         labels:
           severity: warning
@@ -105,7 +129,7 @@ groups:
           service: gateway
         annotations:
           summary: "P95 latence gateway au-dessus du seuil depuis 5 min"
-          description: "P95 actuelle : {{ $values.A }}s"
+          description: "P95 actuelle : {{ $values.B }}s"
         noDataState: NoData
         execErrState: Error
 
@@ -122,14 +146,22 @@ groups:
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
+          - refId: B
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "__expr__"
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
           - refId: C
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: "__expr__"
             model:
               type: threshold
-              expression: A
+              expression: B
               conditions:
-                - evaluator: { type: gt, params: [2] }
+                - evaluator: { type: gt, params: [1.5] }
               refId: C
         labels:
           severity: warning
@@ -137,6 +169,6 @@ groups:
           service: inference
         annotations:
           summary: "P95 latence inference au-dessus du seuil depuis 5 min"
-          description: "P95 actuelle : {{ $values.A }}s"
+          description: "P95 actuelle : {{ $values.B }}s"
         noDataState: NoData
         execErrState: Error
