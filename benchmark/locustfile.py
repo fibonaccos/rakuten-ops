@@ -14,10 +14,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 log = logging.getLogger("rakuten-locust")
 
 
-# --------------------------------------------------------------------------- #
-# Chargement de la configuration et des donnees, une seule fois a l'import.
-# --------------------------------------------------------------------------- #
-
 def load_config():
     path = os.environ.get("SIMULATION_CONFIG", "/benchmark/config/simulation.yaml")
     with open(path, encoding="utf-8") as f:
@@ -25,8 +21,6 @@ def load_config():
 
 
 def load_credential_pool(retries=10, delay=3):
-    """Interroge Postgres pour recuperer (username, role), croise avec
-    PASSWORD_FILE pour obtenir le mot de passe en clair correspondant."""
     db_url = os.environ["DATABASE_URL"]
     pwd_path = os.environ["PASSWORD_FILE"]
 
@@ -76,9 +70,6 @@ def load_samples_pool():
 
     has_description = "description" in df.columns
     records = []
-    # Construction ligne a ligne + pd.isna() explicite : plus fiable que .where()
-    # face aux dtypes "string"/pyarrow-backed de pandas 2.x, qui peuvent laisser
-    # passer un NaN flottant au lieu de le convertir en None.
     for row in df.itertuples(index=False):
         designation = getattr(row, "designation")
         description = getattr(row, "description") if has_description else None
@@ -116,20 +107,14 @@ def sample_batch(n=None):
 
 
 def make_wait_time(mean, sigma):
-    """Loi log-normale : melange de pauses courtes frequentes et de pauses
-    longues occasionnelles, plus realiste qu'un between(a, b) uniforme."""
     mu = math.log(mean)
 
-    def _wait_time(self):  # noqa: ANN001 - signature imposee par Locust
+    def _wait_time(self):
         value = random.lognormvariate(mu, sigma)
         return min(max(value, 0.5), mean * 6)
 
     return _wait_time
 
-
-# --------------------------------------------------------------------------- #
-# Base commune
-# --------------------------------------------------------------------------- #
 
 class RakutenUser(HttpUser):
     abstract = True
@@ -158,8 +143,6 @@ class RakutenUser(HttpUser):
             return False
 
     def _protected_call(self, method, url, expect_ok=(200,), name=None, **kwargs):
-        """Appelle une route protegee. Sur 401 (JWT expire), un client
-        raisonnable se reconnecte et retente une fois avant d'abandonner."""
         name = name or url
         headers = kwargs.pop("headers", {})
         headers.update(self._auth_header())
@@ -184,10 +167,6 @@ class RakutenUser(HttpUser):
                 return
             resp.failure(f"status inattendu: {resp.status_code}")
 
-
-# --------------------------------------------------------------------------- #
-# Population "legitime" (light / moderate / heavy) + variante "unauthorized"
-# --------------------------------------------------------------------------- #
 
 class LegitBaseUser(RakutenUser):
     abstract = True
@@ -232,18 +211,11 @@ class LegitHeavyUser(LegitBaseUser):
 
 
 class UnauthorizedRouteUser(LegitBaseUser):
-    """Compte role=user légitime qui, en plus d'un usage normal herité de
-    LegitBaseUser, tente occasionnellement des routes reservees aux admins."""
-
     @task(4)
     def hit_restricted_route(self):
         route = random.choice(CONFIG["restricted_routes"])
         self._protected_call("GET", route, expect_ok=(403,), name=f"{route} [role=user]")
 
-
-# --------------------------------------------------------------------------- #
-# Utilisateur qui consomme l'API avant de s'etre authentifie
-# --------------------------------------------------------------------------- #
 
 class UnauthenticatedUser(RakutenUser):
     @task(6)
@@ -277,10 +249,6 @@ class UnauthenticatedUser(RakutenUser):
             )
 
 
-# --------------------------------------------------------------------------- #
-# Utilisateur non enregistre dans la base
-# --------------------------------------------------------------------------- #
-
 class UnregisteredUser(RakutenUser):
     @task
     def attempt_login_unknown_user(self):
@@ -295,11 +263,6 @@ class UnregisteredUser(RakutenUser):
                 f"attendu 401, obtenu {resp.status_code}"
             )
 
-
-# --------------------------------------------------------------------------- #
-# Utilisateur qui consomme l'API apres expiration de son JWT (sans jamais
-# se reconnecter — contrairement a LegitBaseUser)
-# --------------------------------------------------------------------------- #
 
 class ExpiredTokenUser(RakutenUser):
     def on_start(self):
@@ -331,10 +294,6 @@ class ExpiredTokenUser(RakutenUser):
     def check_profile(self):
         self._call("GET", "/auth/me", "/auth/me [may-be-expired]")
 
-
-# --------------------------------------------------------------------------- #
-# Application des poids et wait_time depuis simulation.yaml
-# --------------------------------------------------------------------------- #
 
 CLASS_MAP = {
     "legit_light": LegitLightUser,

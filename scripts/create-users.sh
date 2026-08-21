@@ -6,6 +6,8 @@ psql -v ON_ERROR_STOP=1 \
   --dbname "$POSTGRES_DB" \
   --set=api_user="$RAKUTEN__API__DATABASE_USER" \
   --set=api_password="$RAKUTEN__API__DATABASE_PASSWORD" \
+  --set=locust_user="$RAKUTEN__LOCUST__DATABASE_USER" \
+  --set=locust_password="$RAKUTEN__LOCUST__DATABASE_PASSWORD" \
   <<'SQL'
 
 CREATE USER :"api_user" WITH PASSWORD :'api_password';
