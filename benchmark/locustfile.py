@@ -305,10 +305,14 @@ CLASS_MAP = {
     "unauthorized_route": UnauthorizedRouteUser,
 }
 
-for _key, _cls in CLASS_MAP.items():
-    _cls.weight = CONFIG["population"][_key]
-    _wt = CONFIG["wait_time"][_key]
-    _cls.wait_time = make_wait_time(_wt["mean"], _wt["sigma"])
+def _apply_config_to_user_classes():
+    for key, cls in CLASS_MAP.items():
+        cls.weight = CONFIG["population"][key]
+        wt = CONFIG["wait_time"][key]
+        cls.wait_time = make_wait_time(wt["mean"], wt["sigma"])
+ 
+ 
+_apply_config_to_user_classes()
 
 
 @events.test_start.add_listener

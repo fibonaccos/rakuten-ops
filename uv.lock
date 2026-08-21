@@ -2014,6 +2014,7 @@ benchmark = [
     { name = "pandas" },
     { name = "psycopg" },
     { name = "psycopg2-binary" },
+    { name = "pyarrow" },
     { name = "pyyaml" },
 ]
 inference = [
@@ -2065,6 +2066,7 @@ benchmark = [
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "psycopg", specifier = ">=3.3.4" },
     { name = "psycopg2-binary", specifier = ">=2.9.12" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 inference = [

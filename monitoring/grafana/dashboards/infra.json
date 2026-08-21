@@ -341,7 +341,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "probe_success{job=\"blackbox_http\", instance=\"http://mlflow:5000/health\"}",
+          "expr": "probe_success{service=\"mlflow\"}",
           "refId": "A",
           "range": false,
           "instant": true,
@@ -416,7 +416,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "probe_success{job=\"blackbox_tcp\", instance=\"database:5432\"}",
+          "expr": "probe_success{service=\"postgres\"}",
           "refId": "A",
           "range": false,
           "instant": true,
@@ -508,7 +508,7 @@
           "range": true,
           "instant": false,
           "format": "time_series",
-          "legendFormat": "{{instance}}"
+          "legendFormat": "{{service}}"
         }
       ],
       "fieldConfig": {
