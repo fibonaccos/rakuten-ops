@@ -111,6 +111,7 @@ services:
   docker-exporter:
     image: ghcr.io/dlepaux/docker-exporter:1.5.1
     container_name: docker-exporter-service
+    user: "0:0"
     networks:
       - backend
     volumes:

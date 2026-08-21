@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN chmod +x entrypoint.sh && mkdir -p config data reports
 
-ENTRYPOINT ["./benchmark/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
