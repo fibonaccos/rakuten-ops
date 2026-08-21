@@ -1,8 +1,0 @@
-Method,Name,Error,Occurrences,First Seen,Last Seen
-GET,/models,CatchResponseError('echec apres relogin: 401'),142,2026-08-21T20:27:06Z,2026-08-21T20:45:25Z
-GET,/predict/batch [role=user],CatchResponseError('status inattendu: 405'),6,2026-08-21T20:36:51Z,2026-08-21T20:44:34Z
-POST,/predict/single,CatchResponseError('status inattendu: 500'),4,2026-08-21T20:42:04Z,2026-08-21T20:42:04Z
-GET,/models [role=user],CatchResponseError('echec apres relogin: 401'),8,2026-08-21T20:28:15Z,2026-08-21T20:41:38Z
-POST,/predict/batch,CatchResponseError('echec apres relogin: 401'),547,2026-08-21T20:27:20Z,2026-08-21T20:45:35Z
-GET,/models/current,CatchResponseError('echec apres relogin: 401'),67,2026-08-21T20:27:33Z,2026-08-21T20:45:25Z
-POST,/predict/single [may-be-expired],CatchResponseError('status inattendu: 500'),1,2026-08-21T20:42:04Z,2026-08-21T20:42:04Z

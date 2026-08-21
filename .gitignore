@@ -2,6 +2,7 @@
 /artifacts
 /data
 /tracking
+/benchmark/reports/
 ./scripts/passwords.md
 /tracking/*
 __pycache__
