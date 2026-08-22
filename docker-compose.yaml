@@ -1,13 +1,12 @@
 services:
   database:
-    image: postgres:16
+    image: fibonaccos/rakuten-database:0.1.0
     container_name: ${RAKUTEN__API__DATABASE_HOST}
     networks:
       - backend
     volumes:
-      - rakuten_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-      - ./scripts/create-users.sh:/docker-entrypoint-initdb.d/02-create-users.sh:ro
     environment:
       POSTGRES_DB: ${RAKUTEN__DATABASE__NAME}
       POSTGRES_USER: ${RAKUTEN__DATABASE__USER}
@@ -200,14 +199,14 @@ services:
 
 networks:
   backend:
-    name: backend_rakuten_network
+    name: backend_network
     driver: bridge
     internal: true
   frontend:
-    name: frontend_rakuten_network
+    name: frontend_network
     driver: bridge
 
 volumes:
-  rakuten_postgres_data:
+  postgres_data:
   prometheus_data:
   grafana_data:

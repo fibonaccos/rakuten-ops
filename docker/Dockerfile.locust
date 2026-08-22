@@ -5,6 +5,6 @@ WORKDIR /benchmark
 COPY benchmark .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN chmod +x entrypoint.sh && mkdir -p config data reports
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh && mkdir -p config data reports
 
 ENTRYPOINT ["./entrypoint.sh"]
