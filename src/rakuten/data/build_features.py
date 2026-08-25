@@ -24,8 +24,11 @@ def split(
         n_use: int,
         target: str,
         train_size: float,
+        val_size: float,
+        test_size: float,
         random_state: int
-    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, 
+               pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Split the data into ML usable datasets for training and testing.
 
@@ -34,10 +37,13 @@ def split(
         n_use (int): The number of samples to use. If negative, uses all the samples.
         target (str): The name of the target column.
         train_size (float): The proportion of samples to use for training.
+        val_size (float): The proportion of samples to use for validation.
+        test_size (float): The proportion of samples to use for testing.
         random_state (int): The seed for randomness control.
 
     Returns:
-        tuple: A tuple of pd.DataFrame ordered as *(X_train, X_test, y_train, y_test)*.
+        tuple: A tuple of pd.DataFrame ordered as
+            *(X_train, X_val, X_test, y_train, y_val, y_test)*.
     """
 
     df: pd.DataFrame = load(filepath, format="parquet")
@@ -46,17 +52,26 @@ def split(
     X = df.drop(columns=[target]).iloc[:n_sample]
     y = df[[target]].iloc[:n_sample]
 
-    X_train, X_test, y_train, y_test = train_test_split(
+    X_train_val, X_test, y_train_val, y_test = train_test_split(
         X, y[target], stratify=y[target],
-        train_size=train_size, random_state=random_state
+        test_size=test_size, random_state=random_state
     )
+ 
+    relative_val_size = val_size / (train_size + val_size)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_train_val, y_train_val, stratify=y_train_val,
+        test_size=relative_val_size, random_state=random_state
+    )
+ 
+    X_train = pd.DataFrame(X_train, columns=X.columns).reset_index(drop=True)
+    X_val = pd.DataFrame(X_val, columns=X.columns).reset_index(drop=True)
+    X_test = pd.DataFrame(X_test, columns=X.columns).reset_index(drop=True)
+    y_train = pd.DataFrame(y_train, columns=y.columns).reset_index(drop=True)
+    y_val = pd.DataFrame(y_val, columns=y.columns).reset_index(drop=True)
+    y_test = pd.DataFrame(y_test, columns=y.columns).reset_index(drop=True)
+ 
+    return X_train, X_val, X_test, y_train, y_val, y_test
 
-    X_train = pd.DataFrame(X_train, columns=X.columns)
-    X_test = pd.DataFrame(X_test, columns=X.columns)
-    y_train = pd.DataFrame(y_train, columns=y.columns)
-    y_test = pd.DataFrame(y_test, columns=y.columns)
-
-    return X_train, X_test, y_train, y_test
 
 
 def _chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
@@ -368,54 +383,68 @@ def build() -> None:
     CONFIG_DIR = Path(__file__).parent.parent.parent.parent
     params: Box = Box(load_params(str(CONFIG_DIR / "training" / "params.yaml"))).features
 
-    X_train, X_test, y_train, y_test = split(
+    X_train, X_val, X_test, y_train, y_val, y_test = split(
         str(CONFIG_DIR / params.input),
         params.split.n_use,
         params.split.target,
         params.split.train_size,
+        params.split.val_size,
+        params.split.test_size,
         params.split.random_state
     )
-
-    embed_train, embed_test = make_embeddings(
-        X_train, X_test,
+ 
+    X_holdout = pd.concat([X_val, X_test], ignore_index=True)
+ 
+    embed_train, embed_holdout = make_embeddings(
+        X_train, X_holdout,
         params.embedding.columns,
         params.product_id,
         params.embedding.chunk_size,
         params.embedding.overlap
     )
-
-    created_train, created_test = create_features(
-        X_train, X_test, params.statistic.columns, params.product_id
+ 
+    created_train, created_holdout = create_features(
+        X_train, X_holdout, params.statistic.columns, params.product_id
     )
-
+ 
     X_train_grouped = created_train.merge(
         right=embed_train, how="left", on=params.product_id
     )
-
-    X_test_grouped = created_test.merge(
-        right=embed_test, how="left", on=params.product_id
+ 
+    X_holdout_grouped = created_holdout.merge(
+        right=embed_holdout, how="left", on=params.product_id
     )
-
-    X_train_scaled, X_test_scaled, sc = scaler(
-        X_train_grouped, X_test_grouped, params.product_id
+ 
+    X_train_scaled, X_holdout_scaled, sc = scaler(
+        X_train_grouped, X_holdout_grouped, params.product_id
     )
-
-    X_train_reduced, X_test_reduced, pca = reducer(
-        X_train_scaled, X_test_scaled, params.product_id, params.pca.n_components
+ 
+    X_train_reduced, X_holdout_reduced, pca = reducer(
+        X_train_scaled, X_holdout_scaled, params.product_id, params.pca.n_components
     )
-
+ 
+    val_ids = set(X_val[params.product_id])
+    X_val_reduced = X_holdout_reduced[
+        X_holdout_reduced[params.product_id].isin(val_ids)
+    ].reset_index(drop=True)
+    X_test_reduced = X_holdout_reduced[
+        ~X_holdout_reduced[params.product_id].isin(val_ids)
+    ].reset_index(drop=True)
+ 
     save(X_train_reduced, str(CONFIG_DIR / params.output.folder / "x_train.parquet"))
+    save(X_val_reduced, str(CONFIG_DIR / params.output.folder / "x_val.parquet"))
     save(X_test_reduced, str(CONFIG_DIR / params.output.folder / "x_test.parquet"))
-
+ 
     save(y_train, str(CONFIG_DIR / params.output.folder / "y_train.parquet"))
+    save(y_val, str(CONFIG_DIR / params.output.folder / "y_val.parquet"))
     save(y_test, str(CONFIG_DIR / params.output.folder / "y_test.parquet"))
-
+ 
     with open(CONFIG_DIR / params.scale.artifact, "wb") as f:
         joblib.dump(sc, f)
-
+ 
     with open(CONFIG_DIR / params.pca.artifact, "wb") as f:
         joblib.dump(pca, f)
-
+ 
     metadata: dict[str, Any] = {}
     metadata["embedder"] = {
         "path": "",
@@ -431,9 +460,17 @@ def build() -> None:
             "explained_variance": pca.explained_variance_ratio_.sum()
         }
     }
+    metadata["split"] = {
+        "train_size": params.split.train_size,
+        "val_size": params.split.val_size,
+        "test_size": params.split.test_size,
+        "n_train": int(len(X_train)),
+        "n_val": int(len(X_val)),
+        "n_test": int(len(X_test)),
+    }
     with open(CONFIG_DIR / params.output.metadata, "w") as f:
         json.dump(metadata, f, indent=2)
-
+ 
     return None
 
 
