@@ -195,7 +195,6 @@ def train_model() -> None:
         mlflow.log_artifact(str(ROOT_DIR / "artifacts/pca.joblib"))
         mlflow.log_artifact(str(ROOT_DIR / "artifacts/model.keras"))
  
-        # --- évaluation finale sur le test set gelé (jamais vu pendant l'entraînement)
         best_model = ks.models.load_model(ROOT_DIR / params.output.model)
         y_pred = best_model.predict(Xt)
  
