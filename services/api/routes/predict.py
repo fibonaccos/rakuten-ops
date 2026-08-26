@@ -58,7 +58,7 @@ async def predict_single(
         confidence=output.confidence,
         queried_at=metadata.timestamp
     )
-    created = await feed_inference_db(inference, session)
+    await feed_inference_db(inference, session)
     return SinglePredictionResponse(output=output, metadata=metadata)
 
 
@@ -104,5 +104,5 @@ async def predict_batch(
                 queried_at=metadata.timestamp
             )
         )
-    created = await feed_inference_db(inferences, session)
+    await feed_inference_db(inferences, session)
     return BatchPredictionResponse(output=output, metadata=metadata)

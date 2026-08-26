@@ -24,7 +24,6 @@ def init_mlflow_states(app: FastAPI) -> None:
     else:
         model_name, version = model_id.split("/", 2)
         mv = client.get_model_version(model_name, version=version)
-    rid = mv.run_id if mv.run_id else ""
     app.state.rakuten_model_info = {
         "name": mv.name,
         "version": mv.version,

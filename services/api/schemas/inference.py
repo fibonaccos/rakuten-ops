@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field
-from typing import Any
 
 
 class ModelInfo(BaseModel):
