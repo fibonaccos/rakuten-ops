@@ -1,0 +1,73 @@
+/* Rakuten-style theme for Streamlit.
+   Loaded once via load_css() in app.py and injected with st.markdown(). */
+
+:root {
+  --red: #BF0000;
+  --red-dark: #8C0000;
+  --red-soft: #FDECEC;
+  --ink: #1A1A1A;
+  --ink-soft: #6B6B6B;
+  --line: #EBE1E1;
+}
+
+/* Custom header (logo + tagline), built in HTML and injected above the page content */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 4px 20px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.app-header .logo {
+  font-size: 26px;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--red);
+}
+.app-header .tagline {
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+/* Streamlit primary buttons -> pill shape, Rakuten red */
+div.stButton > button {
+  background-color: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-weight: 700;
+}
+div.stButton > button:hover {
+  background-color: var(--red-dark);
+  color: #fff;
+}
+
+/* Text inputs / text areas: softer background, rounded corners */
+.stTextInput input, .stTextArea textarea, .stNumberInput input {
+  border-radius: 10px !important;
+  border: 1px solid var(--line) !important;
+  background: #FBFBFB !important;
+}
+
+/* Homepage hero banner */
+.hero {
+  background: var(--red);
+  color: #fff;
+  border-radius: 16px;
+  padding: 28px 26px;
+  margin-bottom: 20px;
+}
+.hero h1 { margin: 0 0 8px; font-size: 22px; }
+.hero p { margin: 0; opacity: .9; font-size: 13.5px; }
+
+/* Product card thumbnail placeholder (emoji-based, no real images yet) */
+.product-thumb {
+  font-size: 34px;
+  text-align: center;
+  background: var(--red-soft);
+  border-radius: 10px;
+  padding: 18px 0;
+  margin-bottom: 8px;
+}
