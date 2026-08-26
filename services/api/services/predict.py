@@ -54,7 +54,7 @@ async def request_predict_batch(inputs: list[dict[str, str | None]]):
     except httpx.HTTPStatusError as e:
         detail = {
             "message": "An error occured in the inference service.",
-            "error": e
+            "error": dict(e.response.json())
         }
         raise HTTPException(status_code=e.response.status_code, detail=detail)
     except httpx.RequestError as e:

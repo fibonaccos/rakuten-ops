@@ -193,3 +193,55 @@ def test_batch_prediction_journals_every_input(as_admin, session, monkeypatch) -
 def test_models_route_is_reserved_to_admins(as_user) -> None:
     assert as_user.get("/models").status_code == 401
     assert as_user.get("/models/current").status_code == 401
+
+
+def test_a_malformed_inference_answer_is_reported_as_422(as_user, monkeypatch) -> None:
+    """
+    A 422 must reach the caller as a 422.
+
+    Passing the ValidationError object itself as `detail` made FastAPI fail while
+    rendering the response, turning every malformed answer into an opaque 500.
+    """
+    import routes.predict as predict_route
+
+    async def fake_request(_inputs):
+        reply = _inference_reply()
+        reply["output"]["confidence"] = "pas un nombre"
+        return reply
+
+    monkeypatch.setattr(predict_route, "request_predict_single", fake_request)
+
+    response = as_user.post("/predict/single", json={"designation": "piscine"})
+
+    assert response.status_code == 422
+    assert isinstance(response.json()["detail"], str)
+
+
+def test_an_incomplete_inference_answer_is_reported_as_500(as_user, monkeypatch) -> None:
+    import routes.predict as predict_route
+
+    async def fake_request(_inputs):
+        return {"output": _inference_reply()["output"]}  # no metadata
+
+    monkeypatch.setattr(predict_route, "request_predict_single", fake_request)
+
+    response = as_user.post("/predict/single", json={"designation": "piscine"})
+
+    assert response.status_code == 500
+    assert isinstance(response.json()["detail"], str)
+
+
+def test_a_malformed_batch_answer_is_reported_as_422(as_admin, monkeypatch) -> None:
+    import routes.predict as predict_route
+
+    async def fake_request(_inputs):
+        reply = _batch_inference_reply(size=1)
+        reply["metadata"]["mean_inference_time_ms"] = "pas un nombre"
+        return reply
+
+    monkeypatch.setattr(predict_route, "request_predict_batch", fake_request)
+
+    response = as_admin.post("/predict/batch", json=[{"designation": "piscine"}])
+
+    assert response.status_code == 422
+    assert isinstance(response.json()["detail"], str)
