@@ -19,10 +19,10 @@ def init_mlflow_states(app: FastAPI) -> None:
     client = mlflow.MlflowClient()
     model_id = settings.mlflow_model_uri.removeprefix("models:/")
     if "@" in model_id:
-        model_name, alias = model_id.split("@")[-1]
-        mv = client.get_model_version_by_alias(settings.mlflow_model_name, alias=alias)
+        model_name, alias = model_id.split("@", 1)
+        mv = client.get_model_version_by_alias(model_name, alias=alias)
     else:
-        model_name, version = model_id.split("/", 2)
+        model_name, version = model_id.split("/", 1)
         mv = client.get_model_version(model_name, version=version)
     app.state.rakuten_model_info = {
         "name": mv.name,
