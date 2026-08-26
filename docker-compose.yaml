@@ -100,6 +100,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  streamlit:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    container_name: streamlit-service
+    environment:
+      API_BASE_URL: http://api-service:8000
+    ports:
+      - "8501:8501"
+    networks:
+      - frontend
+      - backend
+
   blackbox-exporter:
     image: prom/blackbox-exporter:v0.28.0
     container_name: blackbox-exporter-service
