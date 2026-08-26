@@ -1,0 +1,25 @@
+# Local hooks. CI runs the same ruff check plus the test suites, so a clean
+# pre-commit run is a good predictor of a green pipeline.
+#
+#   uv tool install pre-commit
+#   pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+        # The Grafana provisioning files use the Go templating that check-yaml
+        # cannot parse, and they are validated by Grafana itself at startup.
+        exclude: ^monitoring/grafana/provisioning/
+      - id: check-json
+      - id: check-toml
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=2048]
