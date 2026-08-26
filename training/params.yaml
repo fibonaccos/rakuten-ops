@@ -1,5 +1,14 @@
-clean:
+train_prod:
   input: "data/raw/data.csv"
+  target: "prdtypecode"
+  train_ratio: 0.5
+  random_state: 42
+  output:
+    train: "data/train/raw.csv"
+    prod: "data/prod/raw.csv"
+
+clean:
+  input: "data/train/raw.csv"  
   output: "data/clean/data.parquet"
   columns:
     keep:
@@ -18,8 +27,10 @@ features:
     metadata: "data/features/metadata.json"
   split:
     target: "prdtypecode"
-    n_use: 10000
-    train_size: 0.8
+    n_use: 1000
+    train_size: 0.7
+    val_size: 0.15   
+    test_size: 0.15  
     random_state: 73
   product_id: "productid"
   embedding:
@@ -41,14 +52,18 @@ features:
 train:
   input:
     x_train: "data/features/x_train.parquet"
+    x_val: "data/features/x_val.parquet"     
     x_test: "data/features/x_test.parquet"
     y_train: "data/features/y_train.parquet"
+    y_val: "data/features/y_val.parquet"     
     y_test: "data/features/y_test.parquet"
   output:
     model: "artifacts/model.keras"
     history: "artifacts/history.json"
     labels_map: "artifacts/labels_map.json"
     class_weights: "artifacts/class_weights.json"
+    metrics: "artifacts/metrics.json"                    
+    confusion_matrix: "artifacts/confusion_matrix.json"   
   target: "prdtypecode"
   n_classes: 27
   random_state: 53
@@ -60,6 +75,17 @@ evaluate:
     labels_map: "artifacts/labels_map.json"
   output:
     metrics: "artifacts/metrics.json"
-    confusion_matrix: "artifacts/confusion_matrix.png"
+    confusion_matrix: "artifacts/confusion_matrix.json"
   target: "prdtypecode"
   model: "artifacts/model.keras"
+
+champion_challenger:
+  auto_promote: true  
+  registered_model_name: "rakuten-t-mlp"  
+  champion_alias: "champion"
+  challenger_alias: "challenger"
+  primary_metric: "f1_macro"   
+  min_improvement: 0.01
+  regression_tolerance:
+    f1_weighted: 0.005
+    accuracy: 0.005

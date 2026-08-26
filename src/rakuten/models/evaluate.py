@@ -7,7 +7,7 @@ from box import Box
 from pathlib import Path
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
-    f1_score, roc_auc_score
+    f1_score, roc_auc_score, confusion_matrix
 )
 from typing import Any
 
@@ -69,6 +69,39 @@ def make_report(
     with open(filepath, "w") as f:
         json.dump(report, f, indent=2)
     return report
+def make_confusion_matrix(
+        y_test: np.ndarray,
+        y_pred: np.ndarray,
+        labels_map: dict,
+        filepath: str
+    ) -> np.ndarray:
+    """
+    Build and save the confusion matrix from the model evaluation on the test dataset.
+ 
+    Args:
+        y_test (np.ndarray): Les vraies classes (indices), du jeu de test.
+        y_pred (np.ndarray): Les probabilités prédites par le modèle (shape
+            (n, n_classes)).
+        labels_map (dict): Le mapping classe -> index.
+        filepath (str): Le chemin de sauvegarde (.json).
+ 
+    Returns:
+        np.ndarray: La matrice de confusion.
+    """
+ 
+    labels_map_r: dict = {v: k for k, v in labels_map.items()}
+    y_pred_int = np.argmax(y_pred, axis=1)
+    n_classes = y_pred.shape[1]
+ 
+    cm = confusion_matrix(y_test, y_pred_int, labels=list(range(n_classes)))
+ 
+    with open(filepath, "w") as f:
+        json.dump({
+            "labels": [labels_map_r[i] for i in range(n_classes)],
+            "matrix": cm.tolist()
+        }, f, indent=2)
+ 
+    return cm
 
 
 def evaluate_model() -> dict[str, Any]:
@@ -86,7 +119,7 @@ def evaluate_model() -> dict[str, Any]:
     """
 
     CONFIG_DIR: Path = Path(__file__).parent.parent.parent.parent
-    params: Box = Box(load_params(str(CONFIG_DIR / "config" / "params.yaml"))).evaluate
+    params: Box = Box(load_params(str(CONFIG_DIR / "training" / "params.yaml"))).evaluate
 
     X_test = pd.read_parquet(CONFIG_DIR / params.input.x_test)
     y_test = pd.read_parquet(CONFIG_DIR / params.input.y_test)[params.target]\
