@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def database_url(self) -> str:
-        prefix = f"postgresql+asyncpg://"
+        prefix = "postgresql+asyncpg://"
         user = self.database_user.get_secret_value()
         password = self.database_password.get_secret_value()
         name = self.database_name

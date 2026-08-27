@@ -1,6 +1,7 @@
 """Minimal HTTP client for the team's real FastAPI backend (see openapi.json)."""
 
 import os
+from typing import Any
 
 import requests
 
@@ -11,7 +12,7 @@ class ApiError(Exception):
     """Raised when a call to the API fails (network issue or non-2xx response)."""
 
 
-def _call(method: str, path: str, token: str | None = None, **kwargs) -> dict:
+def _call(method: str, path: str, token: str | None = None, **kwargs) -> Any:
     """Send a request to the API and return the parsed JSON body.
 
     Args:
@@ -21,7 +22,8 @@ def _call(method: str, path: str, token: str | None = None, **kwargs) -> dict:
         **kwargs: Forwarded to requests.request (json=, data=, ...).
 
     Returns:
-        The response body, parsed as JSON.
+        The response body, parsed as JSON: a dict for most routes, a list for
+        the ones that answer with a collection.
     """
     headers = {"Authorization": f"Bearer {token}"} if token else {}
 
@@ -59,3 +61,19 @@ def predict(token: str, designation: str, description: str = "") -> dict:
     """Classify a product. Returns {output: {category, confidence, distribution}, metadata: {...}}."""
     payload = {"designation": designation, "description": description or None}
     return _call("POST", "/predict/single", token=token, json=payload)
+
+
+def get_models(token: str) -> list[dict]:
+    """Return every model in the registry: [{name, version, published_at}, ...].
+
+    Admin only. Raises ApiError for a non-admin token or an unreachable registry.
+    """
+    return _call("GET", "/models", token=token)
+
+
+def get_readiness(token: str) -> dict:
+    """Return the state of each backend: {database, model_registry, inference}.
+
+    Admin only. Each value is "ready" or "not ready".
+    """
+    return _call("GET", "/ready", token=token)

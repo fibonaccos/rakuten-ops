@@ -1,10 +1,7 @@
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
-from mlflow import MlflowClient
+from fastapi import APIRouter, Depends
 from typing import Any
 
 from services.app_state import _get_model_info
-from _config import get_settings
 
 
 router = APIRouter(prefix="/models", tags=["Models"])

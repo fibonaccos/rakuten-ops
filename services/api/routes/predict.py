@@ -42,9 +42,9 @@ async def predict_single(
         output = PredictionOutput(**(result["output"]))
         metadata = SinglePredictionMetadata(**(result["metadata"]))
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=e)
+        raise HTTPException(status_code=422, detail=str(e))
     except KeyError as e:
-        raise HTTPException(status_code=500, detail=e)
+        raise HTTPException(status_code=500, detail=str(e))
     inference = Inference(
         user_id=user.user_id,
         model_name=metadata.model_info.name,
@@ -58,7 +58,7 @@ async def predict_single(
         confidence=output.confidence,
         queried_at=metadata.timestamp
     )
-    created = await feed_inference_db(inference, session)
+    await feed_inference_db(inference, session)
     return SinglePredictionResponse(output=output, metadata=metadata)
 
 
@@ -84,9 +84,9 @@ async def predict_batch(
         output = [PredictionOutput(**r) for r in result["output"]]
         metadata = BatchPredictionMetadata(**(result["metadata"]))
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=e)
+        raise HTTPException(status_code=422, detail=str(e))
     except KeyError as e:
-        raise HTTPException(status_code=500, detail=e)
+        raise HTTPException(status_code=500, detail=str(e))
     inferences = []
     for inp, out in zip(inputs, output):
         inferences.append(
@@ -104,5 +104,5 @@ async def predict_batch(
                 queried_at=metadata.timestamp
             )
         )
-    created = await feed_inference_db(inferences, session)
+    await feed_inference_db(inferences, session)
     return BatchPredictionResponse(output=output, metadata=metadata)
