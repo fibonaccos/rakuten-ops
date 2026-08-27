@@ -19,6 +19,21 @@ Front sur http://localhost:8501, API sur http://localhost:8000/docs, MLflow sur
 http://localhost:5001, Grafana sur http://localhost:3000. Le banc de charge est
 derrière un profil : `docker compose --profile locust up locust`.
 
+Les images de la plateforme (`api`, `inference`, `database`, `streamlit`,
+`locust`) sont construites depuis le dépôt, pas tirées d'un registre : ce que la
+stack déploie est donc toujours le code de la branche courante. Le premier
+démarrage prend quelques minutes, les suivants réutilisent le cache.
+
+Deux échecs courants au premier lancement :
+
+- `Bind for 0.0.0.0:8501 failed: port is already allocated` — un autre projet
+  occupe 8000, 8501, 5001 ou 3000. `docker ps` pour voir qui, puis arrêter la
+  stack concernée.
+- `dependency failed to start: container inference-service is unhealthy` — le
+  service d'inférence télécharge le modèle depuis MLflow avant de répondre. Si
+  cela dépasse `start_period`, l'API renonce à démarrer. Relancer
+  `docker compose up -d` suffit, le modèle étant alors en cache.
+
 ## Développer
 
 Dépendances gérées par [uv](https://docs.astral.sh/uv/), en groupes qui
