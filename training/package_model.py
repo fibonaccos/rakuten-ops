@@ -14,7 +14,7 @@ from model.pyfunc_model import RakutenModel
 
 EMBED_SENTENCE_TRANSFORMER = True
 EMBEDDER_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-REGISTERED_NAME = "rakuten-t-mlp"
+REGISTERED_NAME = "rakuten-naive"
 EXPERIMENT = "rakuten"
 
 ROOT_DIR = Path(__file__).parent.parent

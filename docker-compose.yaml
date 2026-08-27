@@ -1,8 +1,5 @@
 services:
   database:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.database
     image: fibonaccos/rakuten-database:0.1.0
     container_name: ${RAKUTEN__API__DATABASE_HOST}
     networks:
@@ -22,8 +19,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
 
   mlflow:
@@ -57,42 +54,30 @@ services:
         - -c
         - "import urllib.request;urllib.request.urlopen('http://0.0.0.0:${RAKUTEN__API__MLFLOW_PORT}/health')"
       interval: 10s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   inference:
-    container_name: ${RAKUTEN__API__INFERENCE_HOST}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.inference
     image: fibonaccos/rakuten-inference:0.1.0
+    container_name: ${RAKUTEN__API__INFERENCE_HOST}
     networks:
       - backend
     env_file:
       - ".env"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://0.0.0.0:$${RAKUTEN__INFERENCE__PORT}/health"]
-      interval: 10s
-      timeout: 10s
-      retries: 3
-      # The model is downloaded from the registry and loaded before the service
-      # answers anything: 25 artifacts, the sentence-transformer included, which
-      # takes around 50 s from cold. With the previous 7 s the container was
-      # declared unhealthy while it was still starting normally, and the API,
-      # which waits for it in service_healthy, gave up. A first `compose up` on
-      # a clean machine could not succeed.
-      start_period: 120s
+      interval: 60s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
       mlflow:
         condition: service_healthy
     restart: unless-stopped
 
   api:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
     image: fibonaccos/rakuten-api:0.1.0
     container_name: api-service
     networks:
@@ -105,9 +90,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://0.0.0.0:8000/health"]
       interval: 10s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
       database:
         condition: service_healthy
@@ -116,9 +101,7 @@ services:
     restart: unless-stopped
 
   streamlit:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.app
+    image: fibonaccos/rakuten-app:0.1.0
     container_name: streamlit-service
     environment:
       API_BASE_URL: http://api-service:8000
@@ -126,7 +109,16 @@ services:
       - "8501:8501"
     networks:
       - frontend
-      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://0.0.0.0:8501/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
 
   blackbox-exporter:
     image: prom/blackbox-exporter:v0.28.0
@@ -144,7 +136,7 @@ services:
     networks:
       - backend
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro   # lecture seule, aucun accès host filesystem
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
 
   prometheus:
@@ -158,9 +150,9 @@ services:
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
       interval: 10s
-      timeout: 10s
-      retries: 3
-      start_period: 3s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     depends_on:
       inference:
         condition: service_healthy
@@ -201,13 +193,9 @@ services:
     restart: unless-stopped
 
   locust:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.locust
     image: fibonaccos/rakuten-locust:0.1.0
     container_name: "locust-service"
     networks:
-      - frontend
       - backend
     environment:
       SIMULATION_CONFIG: ${RAKUTEN__LOCUST__SIMULATION_CONFIG}

@@ -80,11 +80,11 @@ evaluate:
   model: "artifacts/model.keras"
 
 champion_challenger:
-  auto_promote: true  
-  registered_model_name: "rakuten-t-mlp"  
+  auto_promote: true
+  registered_model_name: "rakuten-naive"
   champion_alias: "champion"
   challenger_alias: "challenger"
-  primary_metric: "f1_macro"   
+  primary_metric: "f1_macro"
   min_improvement: 0.01
   regression_tolerance:
     f1_weighted: 0.005

@@ -6,7 +6,7 @@ from mlflow import MlflowClient
 
 from db.models import User
 from schemas.inference import ModelInfo
-from services.auth import ensure_user_is_admin_from_token
+from services.auth import ensure_user_is_admin_from_token, get_current_user
 from _config import get_settings
 
 
@@ -55,7 +55,7 @@ def get_models(user: User = Depends(ensure_user_is_admin_from_token)) -> list[Mo
     summary="current",
     description="Get the current model in production."
 )
-async def get_current_model(user: User = Depends(ensure_user_is_admin_from_token)) -> ModelInfo:
+async def get_current_model(user: User = Depends(get_current_user)) -> ModelInfo:
     try:
         async with httpx.AsyncClient() as client:
             result = await client.get(get_settings().inference_base_url + "/models/current")

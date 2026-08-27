@@ -195,7 +195,7 @@ def train_model() -> None:
         mlflow.log_artifact(str(ROOT_DIR / "artifacts/pca.joblib"))
         mlflow.log_artifact(str(ROOT_DIR / "artifacts/model.keras"))
  
-        best_model = ks.models.load_model(ROOT_DIR / params.output.model)
+        best_model: Any = ks.models.load_model(ROOT_DIR / params.output.model)
         y_pred = best_model.predict(Xt)
  
         report = make_report(
