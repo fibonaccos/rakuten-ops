@@ -7,10 +7,17 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
-# Cancel superseded runs on the same branch or PR so a push does not queue behind
-# the run it just made obsolete.
+# One run per commit, and only the newest.
+#
+# Pushing to a branch that has an open pull request fires this workflow twice:
+# once for the push, once for the pull_request. github.ref differs between the
+# two events (refs/heads/<branch> against refs/pull/<n>/merge), so the previous
+# group let both run to completion -- twice the build of the inference image,
+# which installs torch, for the same commit. head_ref (the pull request's source
+# branch) and ref_name (the pushed branch) both resolve to <branch>, so the two
+# events now share a group and the newer run cancels the older.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
