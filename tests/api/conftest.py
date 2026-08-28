@@ -133,3 +133,26 @@ def client(service: Path, session: FakeSession) -> Iterator[Any]:
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def as_user(client, session, user_factory):
+    """Authenticate the client as a plain user."""
+    from services.auth import create_access_token
+
+    session.user = user_factory(username="strincal")
+    token = create_access_token(subject="strincal")
+    client.headers.update({"Authorization": f"Bearer {token}"})
+    return client
+
+
+@pytest.fixture
+def as_admin(client, session, user_factory):
+    """Authenticate the client as an admin."""
+    from db.models import UserRole
+    from services.auth import create_access_token
+
+    session.user = user_factory(username="rmazoyer", role=UserRole.ADMIN)
+    token = create_access_token(subject="rmazoyer")
+    client.headers.update({"Authorization": f"Bearer {token}"})
+    return client
