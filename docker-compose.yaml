@@ -109,6 +109,9 @@ services:
       - "8501:8501"
     networks:
       - frontend
+      # Also on backend so the blackbox exporter, which lives there, can probe
+      # it. Without this the streamlit probe reports down on a healthy service.
+      - backend
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://0.0.0.0:8501/health"]
       interval: 10s

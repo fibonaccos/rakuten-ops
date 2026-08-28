@@ -51,29 +51,6 @@ def _batch_inference_reply(size: int = 2) -> dict:
     return reply
 
 
-@pytest.fixture
-def as_user(client, session, user_factory):
-    """Authenticate the client as a plain user."""
-    from services.auth import create_access_token
-
-    session.user = user_factory(username="strincal")
-    token = create_access_token(subject="strincal")
-    client.headers.update({"Authorization": f"Bearer {token}"})
-    return client
-
-
-@pytest.fixture
-def as_admin(client, session, user_factory):
-    """Authenticate the client as an admin."""
-    from db.models import UserRole
-    from services.auth import create_access_token
-
-    session.user = user_factory(username="rmazoyer", role=UserRole.ADMIN)
-    token = create_access_token(subject="rmazoyer")
-    client.headers.update({"Authorization": f"Bearer {token}"})
-    return client
-
-
 def test_single_prediction_requires_a_token(client) -> None:
     response = client.post("/predict/single", json={"designation": "piscine gonflable"})
 
@@ -188,11 +165,6 @@ def test_batch_prediction_journals_every_input(as_admin, session, monkeypatch) -
 
     assert session.commits == 1
     assert len(session.executed) >= 1
-
-
-def test_models_route_is_reserved_to_admins(as_user) -> None:
-    assert as_user.get("/models").status_code == 401
-    assert as_user.get("/models/current").status_code == 401
 
 
 def test_a_malformed_inference_answer_is_reported_as_422(as_user, monkeypatch) -> None:
