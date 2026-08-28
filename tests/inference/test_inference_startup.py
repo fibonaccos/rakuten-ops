@@ -102,3 +102,68 @@ def test_the_publication_date_is_converted_from_milliseconds(startup) -> None:
     assert app.state.rakuten_model_info["published_at"] == datetime.fromtimestamp(
         CREATED_AT_MS / 1000
     )
+
+
+# ── Which model the service asks for ──────────────────────────────────────────
+
+
+def _registered_name() -> str:
+    """The name the training pipeline registers under, from params.yaml."""
+    import yaml
+
+    from tests.conftest import ROOT
+
+    params = yaml.safe_load((ROOT / "training" / "params.yaml").read_text(encoding="utf-8"))
+    return params["champion_challenger"]["registered_model_name"]
+
+
+def test_the_default_model_is_the_one_training_registers(service) -> None:
+    """
+    The two ends of the pipeline must name the same model.
+
+    training/params.yaml decides what the champion is called; the inference
+    service decides what to load. Renaming one and not the other leaves a
+    service asking for a model nobody publishes, and nothing says so until
+    startup fails.
+    """
+    from _config import DEFAULT_MODEL
+
+    assert DEFAULT_MODEL.split("@")[0].split("/")[0] == _registered_name()
+
+
+def test_the_default_follows_the_champion_alias(service) -> None:
+    """Following the alias means a promotion needs no configuration change."""
+    from _config import DEFAULT_MODEL
+
+    assert DEFAULT_MODEL.endswith("@champion")
+
+
+def test_a_service_with_no_model_configured_serves_the_champion(service, monkeypatch) -> None:
+    """
+    A fresh clone starts without anyone filling in a .env.
+
+    `_env_file=None` ignores any .env sitting in the working directory, so the
+    result does not depend on whose machine runs the suite.
+    """
+    from _config import DEFAULT_MODEL, Settings
+
+    monkeypatch.delenv("RAKUTEN__INFERENCE__MLFLOW_MODEL_NAME", raising=False)
+    settings = Settings(_env_file=None)
+
+    assert settings.mlflow_model_uri == f"models:/{DEFAULT_MODEL}"
+
+
+def test_an_empty_entry_is_treated_as_absent(service) -> None:
+    """.env.example ships every key empty, so copying it must not break startup."""
+    from _config import DEFAULT_MODEL, Settings
+
+    assert Settings(mlflow_model_name="").mlflow_model_uri == f"models:/{DEFAULT_MODEL}"
+    assert Settings(mlflow_model_name="   ").mlflow_model_uri == f"models:/{DEFAULT_MODEL}"
+
+
+def test_an_explicit_model_still_wins(service) -> None:
+    from _config import Settings
+
+    settings = Settings(mlflow_model_name="rakuten-naive/7")
+
+    assert settings.mlflow_model_uri == "models:/rakuten-naive/7"

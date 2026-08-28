@@ -1,6 +1,11 @@
 from functools import lru_cache
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# The champion the training pipeline publishes: see champion_challenger in
+# training/params.yaml, which is where the name is decided.
+DEFAULT_MODEL: str = "rakuten-naive@champion"
 
 
 class Settings(BaseSettings):
@@ -18,7 +23,28 @@ class Settings(BaseSettings):
     mlflow_host: str = Field(default=..., description="Name of the mlflow service container at runtime.")
     mlflow_port: int = Field(default=..., description="Port on which the mlflow service runs.")
 
-    mlflow_model_name: str = Field(default=..., description="Name of the model.")
+    # Not required: a fresh clone must start without anyone filling in a .env.
+    # The default is the champion the training pipeline produces, which is the
+    # name declared in training/params.yaml. Override it to serve a challenger
+    # or to pin an exact version.
+    mlflow_model_name: str = Field(
+        default=DEFAULT_MODEL,
+        description="Model to serve, as <name>@<alias> or <name>/<version>."
+    )
+
+    @field_validator("mlflow_model_name", mode="before")
+    @classmethod
+    def _default_when_blank(cls, value: object) -> object:
+        """
+        Treat an empty entry as absent.
+
+        .env.example ships every key with an empty value, so copying it and
+        filling in only what you need leaves this one as "". Without this the
+        service would ask the registry for a model with no name.
+        """
+        if value is None or not str(value).strip():
+            return DEFAULT_MODEL
+        return value
 
     @computed_field
     @property
