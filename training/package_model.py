@@ -14,10 +14,27 @@ from model.pyfunc_model import RakutenModel
 
 EMBED_SENTENCE_TRANSFORMER = True
 EMBEDDER_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-REGISTERED_NAME = "rakuten-naive"
 EXPERIMENT = "rakuten"
 
 ROOT_DIR = Path(__file__).parent.parent
+PARAMS_FILEPATH = ROOT_DIR / "training" / "params.yaml"
+
+
+def read_params() -> dict:
+    """Load training/params.yaml."""
+    with PARAMS_FILEPATH.open(encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def registered_name() -> str:
+    """
+    Name the model is registered under, read from params.yaml.
+
+    compare_promote.py reads the same key to move the champion alias. A second
+    copy here meant a rename could register under one name and alias another,
+    with nothing raising: the promotion would simply find no version.
+    """
+    return read_params()["champion_challenger"]["registered_model_name"]
 
 
 def require_tracking_uri() -> None:
@@ -36,7 +53,7 @@ def log_pipeline(register: bool = True) -> str:
     if run is None:
         raise RuntimeError("log_pipeline doit etre appele dans une run active")
 
-    params = yaml.safe_load(open(ROOT_DIR / "training/params.yaml"))["features"]["embedding"]
+    params = read_params()["features"]["embedding"]
     model_config = {
         "embedder_name": EMBEDDER_NAME,
         "chunk_size": int(params["chunk_size"]),
@@ -72,7 +89,7 @@ def log_pipeline(register: bool = True) -> str:
         model_config=model_config,
         signature=signature,
         input_example=input_example,
-        registered_model_name=REGISTERED_NAME if register else None,
+        registered_model_name=registered_name() if register else None,
         pip_requirements=[
             "keras>=3.15.1", "sentence-transformers>=5.7.0", "scikit-learn>=1.9.0",
             "pandas<3.0.0", "lxml>=6.1.1", "joblib>=1.5.3", "numpy>=2.5.2"
