@@ -1,22 +1,22 @@
 """
-Copie uniquement les images utilisées par demo_products.csv depuis le dossier
-complet d'images vers un dossier "demo_images" allégé.
+Copie uniquement les images utilisées par data/raw/demo_products.csv depuis le
+dossier complet d'images vers data/images (le dossier léger utilisé par Streamlit).
 
-Usage (depuis services/streamlit/) :
-    python3 extraire_images_demo.py
+Usage (depuis la racine du repo) :
+    python3 src/rakuten/data/extraire_images_demo.py
 """
 
 import csv
 import shutil
 from pathlib import Path
 
-# Dossier où se trouvent TOUTES tes images (le dossier complet, déjà sur ta machine).
-SOURCE_DIR = Path("data/images/images_train")
+# Dossier où se trouvent TOUTES les images (le dossier complet).
+SOURCE_DIR = Path("data/images/image_train")
 
-# Dossier allégé, créé par ce script, qui ne contiendra que les images du catalogue de démo.
+# Sous-dossier allégé, utilisé par services/streamlit/views/accueil.py.
 TARGET_DIR = Path("data/images/demo_images")
 
-CSV_PATH = Path("data/demo_products.csv")
+CSV_PATH = Path("data/raw/demo_products.csv")
 
 
 def main() -> None:

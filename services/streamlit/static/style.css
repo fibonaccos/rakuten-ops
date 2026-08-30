@@ -10,23 +10,62 @@
   --line: #EBE1E1;
 }
 
-/* Custom header (logo + tagline), built in HTML and injected above the page content */
-.app-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 4px 20px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 24px;
+/* Streamlit adds a large default top margin above the page content. We tighten
+   it, but not too much: Streamlit's own sidebar-collapse arrow sits in the
+   top-left corner of the main content area, so too little padding here makes
+   it overlap the logo/account menu. */
+.block-container {
+  padding-top: 3rem !important;
 }
-.app-header .logo {
+
+/* Header: logo (left) and account link (right), laid out via st.columns in ui.py */
+.logo {
   font-size: 26px;
   font-weight: 800;
   font-style: italic;
   color: var(--red);
 }
-.app-header .tagline {
-  color: var(--ink-soft);
+.header-rule {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 2px 0 8px;
+}
+/* Account menu: trigger label + dropdown, revealed on hover.
+   .st-key-account-menu / .st-key-account-dropdown come from the matching
+   st.container(key=...) calls in services/ui.py. */
+.st-key-account-menu {
+  position: relative;
+}
+.st-key-account-trigger,
+.account-trigger {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink);
+  cursor: default;
+  text-align: right;
+  padding: 6px 0;
+}
+.st-key-account-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  padding: 10px 14px;
+}
+.st-key-account-menu:hover .st-key-account-dropdown {
+  display: block;
+}
+.st-key-header-sell div[data-testid="stPageLink"] a,
+.st-key-header-sell div[data-testid="stPageLink"] p,
+.st-key-header-sell div[data-testid="stPageLink"] span {
+  color: var(--ink) !important;
+  font-weight: 600;
   font-size: 13.5px;
 }
 
@@ -51,6 +90,25 @@ div.stButton > button:hover {
   background: #FBFBFB !important;
 }
 
+/* Homepage search bar: large, light gray, rounded -- matches rakuten.fr
+   (targets the st.container(key="search-bar") wrapper in accueil.py) */
+.st-key-search-bar .stTextInput input {
+  border-radius: 8px !important;
+  border: 1px solid var(--line) !important;
+  background: #F6F6F6 !important;
+  padding: 12px 16px !important;
+  font-size: 14px !important;
+}
+.st-key-search-bar div.stButton > button {
+  border-radius: 8px;
+  background-color: var(--ink);
+  width: 100%;
+  height: 47px;
+}
+.st-key-search-bar div.stButton > button:hover {
+  background-color: #000;
+}
+
 /* Homepage hero banner */
 .hero {
   background: var(--red);
@@ -70,4 +128,52 @@ div.stButton > button:hover {
   border-radius: 10px;
   padding: 18px 0;
   margin-bottom: 8px;
+}
+
+/* Sidebar: prominent red Administration shortcut, set apart from the plain nav links */
+.st-key-admin-highlight {
+  background: var(--red);
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin-bottom: 14px;
+}
+.st-key-admin-highlight div[data-testid="stPageLink"] a,
+.st-key-admin-highlight div[data-testid="stPageLink"] p,
+.st-key-admin-highlight div[data-testid="stPageLink"] span {
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+.st-key-admin-highlight div[data-testid="stPageLink"] a:hover {
+  opacity: 0.9;
+}
+
+/* Sidebar category buttons: plain list items, not red pills */
+[data-testid="stSidebar"] div.stButton > button {
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  text-align: left;
+  padding: 6px 8px;
+}
+[data-testid="stSidebar"] div.stButton > button:hover {
+  background: var(--red-soft);
+  color: var(--red-dark);
+}
+
+/* Footer: light gray band, uppercase column titles (matches rakuten.fr) */
+.st-key-footer {
+  background: #F6F6F6;
+  border-radius: 12px;
+  padding: 28px 24px 12px;
+  margin-top: 12px;
+}
+.footer-col-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
 }
