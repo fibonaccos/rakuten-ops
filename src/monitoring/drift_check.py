@@ -1,7 +1,7 @@
 """
 Pour chaque lot simulé (data/stream/batch_XX.csv, voir simulate_stream.py),
 compare la distribution des données à la référence d'entraînement
-(data/raw/data.csv) avec Evidently, et évalue la performance du modèle en
+(data/train/raw.csv) avec Evidently, et évalue la performance du modèle en
 production sur un échantillon du lot (via l'API réelle). Logge tout dans
 MLflow, un run par lot, dans la même série de steps pour suivre l'évolution
 dans le temps.
@@ -25,7 +25,7 @@ import requests
 from evidently import Dataset, DataDefinition, Report
 from evidently.presets import DataDriftPreset
 
-REFERENCE_PATH = Path("data/raw/data.csv")
+REFERENCE_PATH = Path("data/train/raw.csv")
 STREAM_DIR = Path("data/stream")
 REPORTS_DIR = Path("data/monitoring_reports")
 
@@ -44,7 +44,7 @@ CATEGORICAL_COLUMNS = ["prdtypecode"]
 
 def load_reference() -> pd.DataFrame:
     """Load the real training data used as the drift reference."""
-    df = pd.read_csv(REFERENCE_PATH, sep=";", dtype={"prdtypecode": str})
+    df = pd.read_csv(REFERENCE_PATH, sep=",", dtype={"prdtypecode": str})
     for col in TEXT_COLUMNS:
         df[col] = df[col].fillna("")
     return df
@@ -153,7 +153,7 @@ def main() -> None:
 
         for step, batch_path in enumerate(batches, start=1):
             print(f"--- Lot {step}/{len(batches)} : {batch_path.name} ---")
-            batch = pd.read_csv(batch_path, sep=";", dtype={"prdtypecode": str})
+            batch = pd.read_csv(batch_path, sep=",", dtype={"prdtypecode": str})
             for col in TEXT_COLUMNS:
                 batch[col] = batch[col].fillna("")
 
