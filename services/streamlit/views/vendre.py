@@ -3,6 +3,10 @@
 import streamlit as st
 
 from services.api_client import ApiError, get_current_model, predict
+from services.catalog import image_for, label_for, products_in_category
+from services.ui import render_distribution, render_prediction
+
+SIMILAR_SHOWN = 3
 
 st.title("Déposer une annonce")
 
@@ -24,27 +28,57 @@ except ApiError:
         "entraîné et publié (voir l'équipe ML)."
     )
 
-designation = st.text_input(
-    "Titre de l'annonce", placeholder="Ex : Manteau en laine femme, taille M"
-)
-description = st.text_area("Description", placeholder="État, matière, marque, dimensions...")
+with st.form("annonce"):
+    designation = st.text_input(
+        "Titre de l'annonce", placeholder="Ex : Manteau en laine femme, taille M"
+    )
+    description = st.text_area(
+        "Description",
+        placeholder="État, matière, marque, dimensions...",
+        help="Facultatif, mais le modèle s'appuie dessus autant que sur le titre.",
+    )
+    submitted = st.form_submit_button("Analyser automatiquement")
 
-if st.button("Analyser automatiquement"):
-    if not designation:
-        st.warning("Le titre est obligatoire pour lancer la classification.")
-    else:
+if submitted and not designation:
+    st.warning("Le titre est obligatoire pour lancer la classification.")
+elif submitted:
+    result = None
+    with st.spinner("Classification en cours..."):
         try:
             result = predict(st.session_state.token, designation, description)
-        except ApiError as e:
-            st.error(str(e))
-        else:
-            output = result["output"]
-            st.success(f"Catégorie suggérée : **{output['category']}**")
-            st.progress(output["confidence"], text=f"Confiance : {output['confidence']:.0%}")
+        except ApiError as error:
+            st.error(str(error))
 
-            with st.expander("Voir la distribution complète des probabilités"):
-                sorted_dist = sorted(
-                    output["distribution"].items(), key=lambda kv: kv[1], reverse=True
-                )
-                for category, proba in sorted_dist[:10]:
-                    st.write(f"{category} — {proba:.1%}")
+    if result is not None:
+        output = result["output"]
+        render_prediction(output["category"], output["confidence"])
+
+        st.markdown("**Les autres catégories envisagées**")
+        render_distribution(output["distribution"])
+
+        metadata = result.get("metadata", {})
+        model = metadata.get("model_info", {})
+        if model:
+            st.caption(
+                f"Classé par {model.get('name', 'le modèle')} v{model.get('version', '?')} "
+                f"en {metadata.get('inference_time_ms', 0):.0f} ms."
+            )
+
+        # Showing what is already filed under the suggested category is the
+        # quickest way for a seller to tell whether the answer is plausible.
+        similar = products_in_category(label_for(output["category"]))[:SIMILAR_SHOWN]
+        if similar:
+            st.divider()
+            st.markdown("**Déjà en ligne dans cette catégorie**")
+            for column, product in zip(st.columns(len(similar)), similar):
+                with column, st.container(border=True):
+                    photo = image_for(product)
+                    if photo:
+                        st.image(str(photo), width="stretch")
+                    else:
+                        st.markdown(
+                            f"<div class='product-thumb'>{product['emoji']}</div>",
+                            unsafe_allow_html=True,
+                        )
+                    st.write(f"**{product['designation'][:60]}**")
+                    st.write(product["price"])
