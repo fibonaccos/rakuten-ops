@@ -4,7 +4,7 @@ import streamlit as st
 
 from services.ui import inject_css, render_header, render_sidebar, render_footer
 
-st.set_page_config(page_title="Rakuten", page_icon="🏷️", layout="centered")
+st.set_page_config(page_title="Rakuten", page_icon="static/favicon.png", layout="centered")
 inject_css()
 
 if "token" not in st.session_state:
