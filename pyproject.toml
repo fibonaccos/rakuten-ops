@@ -7,6 +7,12 @@ requires-python = ">=3.12,<3.13"
 dependencies = []
 
 [dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.3.0",
+    "httpx>=0.28.1",
+    "ruff>=0.15.0",
+]
 api = [
     "asyncpg>=0.31.0",
     "bcrypt>=5.0.0",
@@ -70,3 +76,37 @@ torch = [
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+
+[tool.pytest.ini_options]
+# Every service is built as its own image with its own requirements, so each one
+# is also tested on its own (see the Makefile). Only the paths shared by all the
+# suites live here; a service directory is added by its own tests/<svc>/conftest.py.
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::DeprecationWarning:mlflow.*",
+]
+
+[tool.ruff]
+line-length = 99
+target-version = "py312"
+exclude = ["*/requirements.txt"]
+
+[tool.ruff.lint]
+# Pinned explicitly rather than extended: ruff's default selection widens between
+# releases, and a CI that starts failing on a ruff upgrade is a CI nobody trusts.
+# These are the rules that caught real defects in this repository. Import sorting
+# ("I") is deliberately left out: enforcing it would rewrite every file and
+# collide with everyone's open branches; run
+# `uv run ruff check --select I --fix .` when the team wants that pass.
+select = [
+    "E4",   # imports
+    "E7",   # statements
+    "E9",   # runtime errors
+    "F",    # pyflakes: unused imports, undefined names, dead assignments
+    "E722", # bare except
+    "F541", # f-string without placeholders
+]

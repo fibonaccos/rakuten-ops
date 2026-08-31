@@ -16,7 +16,7 @@ def load(filepath: str, format: Literal["csv", "parquet"]) -> pd.DataFrame:
     """
 
     if format == "csv":
-        return pd.read_csv(filepath, sep=";")
+        return pd.read_csv(filepath, sep=",")
     if format == "parquet":
         return pd.read_parquet(filepath)
 

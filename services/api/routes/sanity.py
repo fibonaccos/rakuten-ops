@@ -36,18 +36,18 @@ async def ready(user: User = Depends(ensure_user_is_admin_from_token)) -> dict[s
         async with engine.connect() as connection:
             _ = await connection.execute(text("SELECT 1"))
         database_readiness = "ready"
-    except:
+    except Exception:
         database_readiness = "not ready"
     async with httpx.AsyncClient() as client:
         try:
             _ = await client.get(f"{get_settings().mlflow_server_uri}/health")
             mlflow_readiness = "ready"
-        except:
+        except Exception:
             mlflow_readiness = "not_ready"
         try:
             _ = await client.get(f"{get_settings().inference_base_url}/health")
             inference_readiness = "ready"
-        except:
+        except Exception:
             inference_readiness = "not_ready"
     return {
         "database": database_readiness,

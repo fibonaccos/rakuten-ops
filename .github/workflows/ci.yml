@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "dev-**", "feature/**", "fix/**"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# One run per commit, and only the newest.
+#
+# Pushing to a branch that has an open pull request fires this workflow twice:
+# once for the push, once for the pull_request. github.ref differs between the
+# two events (refs/heads/<branch> against refs/pull/<n>/merge), so the previous
+# group let both run to completion -- twice the build of the inference image,
+# which installs torch, for the same commit. head_ref (the pull request's source
+# branch) and ref_name (the pushed branch) both resolve to <branch>, so the two
+# events now share a group and the newer run cancels the older.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "1"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Check the code
+        run: uv run --group dev ruff check .
+
+      - name: Check the stack definition against .env.example
+        run: uv run --group dev pytest tests/stack -v
+
+  # One job per service: each is built as its own image with its own requirements,
+  # and their modules share names (main, routes, services), so they cannot share a
+  # Python process either.
+  test-api:
+    name: Test gateway API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group api --group dev
+
+      - name: Run the API suite
+        run: uv run pytest tests/api -v
+
+  test-inference:
+    name: Test inference service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group inference --group dev
+
+      - name: Run the inference suite
+        run: uv run pytest tests/inference -v
+
+  test-ui:
+    name: Test front-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group streamlit --group dev
+
+      - name: Run the front-end suite
+        run: uv run pytest tests/streamlit -v
+
+  test-ml:
+    name: Test model pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # The ml group pulls torch from the CPU index declared in pyproject.toml,
+      # so this job stays on a runner without a GPU.
+      - name: Install dependencies
+        run: uv sync --group ml --group dev
+
+      - name: Run the pipeline and parity suites
+        run: uv run pytest tests/model tests/ml -v
+
+  docker-build:
+    name: Build image (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    needs: [lint, test-api, test-inference, test-ui, test-ml]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            dockerfile: docker/Dockerfile.api
+          - image: inference
+            dockerfile: docker/Dockerfile.inference
+          - image: app
+            dockerfile: docker/Dockerfile.app
+          - image: database
+            dockerfile: docker/Dockerfile.database
+          - image: locust
+            dockerfile: docker/Dockerfile.locust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          tags: rakuten-${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

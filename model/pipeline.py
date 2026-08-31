@@ -122,8 +122,14 @@ class Cleaner:
         }
         outputs: list[str] = []
         for t in inputs:
+            # Both patterns apply to the same text, one after the other, and each
+            # text yields exactly one output, as in clean_data.remove_patterns
+            # which produced the data the model was trained on. Appending inside
+            # the pattern loop returned the designation twice and dropped the
+            # description before it ever reached the model.
             for name, pattern in patterns.items():
-                outputs.append(re.sub(pattern, name, t))
+                t = re.sub(pattern, name, t)
+            outputs.append(t)
         return (outputs[0], outputs[1])
 
     def _keep_characters(self, /, inputs: tuple[str, str]) -> tuple[str, str]:

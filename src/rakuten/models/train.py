@@ -7,7 +7,6 @@ from box import Box
 from collections import Counter
 from keras.callbacks import ModelCheckpoint
 from keras.metrics import AUC
-from keras.utils import plot_model
 from pathlib import Path
 
 from ..shared.loaders import load_params

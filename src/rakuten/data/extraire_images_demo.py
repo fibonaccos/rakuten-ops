@@ -1,6 +1,12 @@
 """
-Copie uniquement les images utilisées par data/raw/demo_products.csv depuis le
-dossier complet d'images vers data/images (le dossier léger utilisé par Streamlit).
+Copie uniquement les images utilisées par services/streamlit/data/demo_products.csv
+depuis le dossier complet d'images vers services/streamlit/data/images/demo_images
+(le dossier léger utilisé par services/catalog.py).
+
+Écrire dans services/streamlit/data/ (et pas à la racine du repo) est important :
+c'est le seul moyen pour que ces fichiers soient inclus dans l'image Docker du
+front-end (Dockerfile.app fait `COPY services/streamlit .`, donc rien en dehors
+de ce dossier n'atterrit dans le conteneur).
 
 Usage (depuis la racine du repo) :
     python3 src/rakuten/data/extraire_images_demo.py
@@ -10,13 +16,13 @@ import csv
 import shutil
 from pathlib import Path
 
-# Dossier où se trouvent TOUTES les images (le dossier complet).
-SOURCE_DIR = Path("data/images/image_train")
+# Dossier où se trouvent TOUTES les images (le dossier complet, hors du repo Git).
+SOURCE_DIR = Path("data/images")
 
-# Sous-dossier allégé, utilisé par services/streamlit/views/accueil.py.
-TARGET_DIR = Path("data/images/demo_images")
+# Sous-dossier allégé, utilisé par services/streamlit/services/catalog.py.
+TARGET_DIR = Path("services/streamlit/data/images/demo_images")
 
-CSV_PATH = Path("data/raw/demo_products.csv")
+CSV_PATH = Path("services/streamlit/data/demo_products.csv")
 
 
 def main() -> None:
