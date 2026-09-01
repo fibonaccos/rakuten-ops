@@ -16,7 +16,9 @@ Si aucun modèle n'est en production, le drift est quand même calculé -- seule
 la partie performance est marquée comme indisponible pour ce lot.
 """
 
+import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import mlflow
@@ -145,6 +147,11 @@ def main() -> None:
         return
 
     token = get_api_token()
+    summary = {
+        "run_at": datetime.now(timezone.utc).isoformat(),
+        "reference_rows": len(reference),
+        "batches": [],
+    }
 
     with mlflow.start_run(run_name="drift-monitoring-run"):
         mlflow.log_param("n_batches", len(batches))
@@ -171,8 +178,19 @@ def main() -> None:
             mlflow.log_metrics(metrics, step=step)
             mlflow.log_artifact(str(report_path), artifact_path="drift_reports")
 
+            summary["batches"].append({
+                "batch": batch_path.name,
+                "n_rows": len(batch),
+                "metrics": metrics,
+                "report": str(report_path),
+            })
+
+    summary_path = REPORTS_DIR / "drift_summary.json"
+    with summary_path.open("w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2, ensure_ascii=False)
+
     print(f"\nTerminé. Résultats visibles sur {MLFLOW_TRACKING_URI}, "
-          "expérience 'data-drift-monitoring'.")
+          f"expérience 'data-drift-monitoring'. Résumé JSON : {summary_path}")
 
 
 if __name__ == "__main__":

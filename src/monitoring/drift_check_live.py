@@ -126,9 +126,20 @@ def main() -> None:
         mlflow.log_metrics(metrics)
         mlflow.log_artifact(str(report_path))
 
+    summary_path = reports_dir / "drift_summary_live.jsonl"
+    entry = {
+        "run_at": now.isoformat(),
+        "since": since.isoformat(),
+        "metrics": metrics,
+        "report": str(report_path),
+    }
+    with summary_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
     print(metrics)
     save_last_check(now)
-    print(f"\nTerminé. Résultats dans MLflow, expérience 'data-drift-monitoring-live'.")
+    print(f"\nTerminé. Résultats dans MLflow, expérience 'data-drift-monitoring-live'. "
+          f"Historique JSON : {summary_path}")
 
 
 if __name__ == "__main__":
