@@ -27,7 +27,7 @@ import pandas as pd
 
 from drift_check import MLFLOW_TRACKING_URI
 from drift_check_live import compute_drift, compute_live_accuracy, get_since, load_current_batch_from_db, load_reference, save_last_check, MIN_ROWS_FOR_DRIFT
-from retrain_trigger import DRY_RUN, retrain, run_pipeline_step, should_retrain
+from retrain_trigger import DRY_RUN, run_pipeline_step, should_retrain
 
 TRAIN_PATH = Path("data/train/raw.csv")
 MIN_LABELED_ROWS_FOR_RETRAIN = 20  # en dessous, pas assez de vraies étiquettes pour ré-entraîner utilement
