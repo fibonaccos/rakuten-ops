@@ -25,6 +25,7 @@ import mlflow
 import pandas as pd
 import requests
 from evidently import Dataset, DataDefinition, Report
+from evidently.core.report import Snapshot
 from evidently.presets import DataDriftPreset
 
 REFERENCE_PATH = Path("data/train/raw.csv")
@@ -47,6 +48,7 @@ CATEGORICAL_COLUMNS = ["prdtypecode"]
 def load_reference() -> pd.DataFrame:
     """Load the real training data used as the drift reference."""
     df = pd.read_csv(REFERENCE_PATH, sep=",", dtype={"prdtypecode": str})
+    df = df.drop(columns=["productid", "imageid"])
     for col in TEXT_COLUMNS:
         df[col] = df[col].fillna("")
     return df
@@ -57,7 +59,7 @@ def load_batches() -> list[Path]:
     return sorted(STREAM_DIR.glob("batch_*.csv"))
 
 
-def compute_drift(reference: pd.DataFrame, batch: pd.DataFrame) -> dict[str, float]:
+def compute_drift(reference: pd.DataFrame, batch: pd.DataFrame) -> tuple[dict[str, float], Snapshot]:
     """Run Evidently's DataDriftPreset and return a flat dict of scalar metrics."""
     definition = DataDefinition(
         categorical_columns=CATEGORICAL_COLUMNS, text_columns=TEXT_COLUMNS

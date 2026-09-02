@@ -27,7 +27,7 @@ features:
     metadata: "data/features/metadata.json"
   split:
     target: "prdtypecode"
-    n_use: 1000
+    n_use: 10000
     train_size: 0.7
     val_size: 0.15   
     test_size: 0.15  

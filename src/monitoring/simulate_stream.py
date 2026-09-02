@@ -20,7 +20,7 @@ import pandas as pd
 
 SOURCE_PATH = Path("data/prod/raw.csv")
 OUTPUT_DIR = Path("data/stream")
-BATCH_SIZE = 600
+BATCH_SIZE = 5000
 RANDOM_STATE = 42
 
 # Un batch par profil de dérive. `weight_top_n` = combien de catégories sont
@@ -60,6 +60,7 @@ def main() -> None:
         batch = build_skewed_batch(df, profile, rng)
 
         out_path = OUTPUT_DIR / f"{profile['name']}.csv"
+        batch = batch.drop(columns=["productid", "imageid"])
         batch.to_csv(out_path, index=False)
 
         top_categories = batch["prdtypecode"].value_counts().head(5)

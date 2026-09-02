@@ -161,7 +161,7 @@ def train_model() -> None:
         history = model.fit(
             X,
             y_onehot,
-            epochs=100,
+            epochs=30,
             batch_size=128,
             class_weight=class_weights,
             validation_data=(Xv, yv_onehot), 
