@@ -64,6 +64,9 @@ streamlit = [
     "requests>=2.34.2",
     "streamlit>=1.62.0",
 ]
+monitoring = [
+    "evidently>=0.7.21",
+]
 
 
 [tool.uv.sources]

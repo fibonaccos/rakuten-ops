@@ -6,6 +6,8 @@ psql -v ON_ERROR_STOP=1 \
   --dbname "$POSTGRES_DB" \
   --set=api_user="$RAKUTEN__API__DATABASE_USER" \
   --set=api_password="$RAKUTEN__API__DATABASE_PASSWORD" \
+  --set=airflow_user="$RAKUTEN__AIRFLOW__DATABASE_USER" \
+  --set=airflow_password="$RAKUTEN__AIRFLOW__DATABASE_PASSWORD" \
   --set=locust_user="$RAKUTEN__LOCUST__DATABASE_USER" \
   --set=locust_password="$RAKUTEN__LOCUST__DATABASE_PASSWORD" \
   <<'SQL'
@@ -25,6 +27,19 @@ TO :"api_user";
 GRANT USAGE, SELECT
 ON SEQUENCE inference_inference_id_seq
 TO :"api_user";
+
+
+CREATE USER :"airflow_user" WITH PASSWORD :'airflow_password';
+
+GRANT USAGE ON SCHEMA public TO :"airflow_user";
+
+GRANT SELECT, INSERT, UPDATE
+ON TABLE inference
+TO :"airflow_user";
+
+GRANT USAGE, SELECT
+ON SEQUENCE inference_inference_id_seq
+TO :"airflow_user";
 
 
 CREATE USER :"locust_user" WITH PASSWORD :'locust_password';

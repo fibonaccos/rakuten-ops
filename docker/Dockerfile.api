@@ -12,15 +12,13 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m venv $VIRTUAL_ENV
-
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 WORKDIR /app
 
 COPY services/api .
 
-RUN uv init --bare --no-cache && uv add -r requirements.txt
+RUN uv init --bare --no-cache
+RUN uv add -r requirements.txt
+
 ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000

@@ -19,7 +19,7 @@ from pathlib import Path
 import pandas as pd
 
 SOURCE_PATH = Path("data/prod/raw.csv")
-OUTPUT_DIR = Path("data/stream")
+OUTPUT_DIR = Path("benchmark/data")
 BATCH_SIZE = 5000
 RANDOM_STATE = 42
 
@@ -59,9 +59,9 @@ def main() -> None:
         rng = random.Random(RANDOM_STATE)
         batch = build_skewed_batch(df, profile, rng)
 
-        out_path = OUTPUT_DIR / f"{profile['name']}.csv"
+        out_path = OUTPUT_DIR / f"{profile['name']}.parquet"
         batch = batch.drop(columns=["productid", "imageid"])
-        batch.to_csv(out_path, index=False)
+        batch.to_parquet(out_path, index=False)
 
         top_categories = batch["prdtypecode"].value_counts().head(5)
         print(f"{out_path} : {len(batch)} lignes -- top catégories :")

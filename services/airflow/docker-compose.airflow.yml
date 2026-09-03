@@ -1,0 +1,111 @@
+version: "3.8"
+
+# Ce fichier est pensé comme un override à fusionner avec ton compose existant :
+#   docker compose -f docker-compose.yml -f services/airflow/docker-compose.airflow.yml up -d
+# Remplace <SHARED_DOCKER_NETWORK_NAME> par le nom du network déjà utilisé par
+# tes autres services (api gateway, mlflow, inference, postgres, prometheus, grafana).
+
+x-airflow-common: &airflow-common
+  image: fibonaccos/rakuten-airflow-base:0.1.0
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${RAKUTEN__AIRFLOW__FERNET_KEY}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: utc
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
+    AIRFLOW_CONN_APP_POSTGRES: postgresql://${RAKUTEN__AIRFLOW__DATABASE_USER}:${RAKUTEN__AIRFLOW__DATABASE_PASSWORD}@${RAKUTEN__AIRFLOW__DATABASE_HOST}:${RAKUTEN__AIRFLOW__DATABASE_PORT}/${RAKUTEN__AIRFLOW__DATABASE_NAME}
+    MLFLOW_TRACKING_URI: ${RAKUTEN__AIRFLOW__MLFLOW_HOST}
+    DATA_ROOT: /opt/airflow/data
+    BATCH_SIZE: 2500
+    DRIFT_THRESHOLD: ${RAKUTEN__AIRFLOW__DRIFT_THRESHOLD}
+    CRON_EXPR: ${RAKUTEN__AIRFLOW__CRON_EXPR}
+    PROMETHEUS_PUSHGATEWAY_URL: http://pushgateway:9091
+  volumes:
+    - ./services/airflow/dags:/opt/airflow/dags
+    - ./services/airflow/logs:/opt/airflow/logs
+    - ./services/airflow/plugins:/opt/airflow/plugins
+    - ./data/train:/opt/airflow/data/references
+    - ./data/raw:/opt/airflow/data/train
+    - ./data/batches:/opt/airflow/data/batches
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "${AIRFLOW_UID:-50000}:0"
+  group_add:
+    - "${DOCKER_GID:-999}"   # gid du groupe "docker" sur l'hôte, cf. `getent group docker`
+  networks:
+    - backend
+  depends_on:
+    airflow-postgres:
+      condition: service_healthy
+
+services:
+  airflow-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    networks:
+      - backend
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow connections import /opt/airflow/dags/../connections.json || true
+        airflow users create \
+          --username "${_AIRFLOW_WWW_USER_USERNAME}" \
+          --password "${_AIRFLOW_WWW_USER_PASSWORD}" \
+          --firstname airflow --lastname airflow \
+          --role Admin --email admin@example.com || true
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "8081:8080"
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    networks:
+      - backend
+
+volumes:
+  airflow-db-data:
+
+networks:
+  backend:
+    name: backend_network
+    driver: bridge
+    internal: true
+  frontend:
+    name: frontend_network
+    driver: bridge

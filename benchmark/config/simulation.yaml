@@ -13,13 +13,13 @@ population:
   expired_token: 2
 
 wait_time:
-  legit_light:         {mean: 30, sigma: 3}
-  legit_moderate:      {mean: 10, sigma: 2}
-  legit_heavy:         {mean: 2, sigma: 0.5}
-  legit_admin:         {mean: 60, sigma: 3}
-  unauthenticated:     {mean: 20, sigma: 2}
-  unregistered:        {mean: 50, sigma: 3}
-  expired_token:       {mean: 50, sigma: 2}
+  legit_light:         {mean: 30, sigma: 1}
+  legit_moderate:      {mean: 10, sigma: 0.2}
+  legit_heavy:         {mean: 2, sigma: 0.04}
+  legit_admin:         {mean: 60, sigma: 2}
+  unauthenticated:     {mean: 20, sigma: 0.5}
+  unregistered:        {mean: 50, sigma: 1.5}
+  expired_token:       {mean: 50, sigma: 1.5}
 
 unregistered_usernames:
   - {username: "ghost01", password: "Ghost01@123!"}

@@ -3,6 +3,7 @@
 /data
 /tracking
 /benchmark/reports/
+/benchmark/data/
 ./scripts/passwords.md
 /tracking/*
 __pycache__
