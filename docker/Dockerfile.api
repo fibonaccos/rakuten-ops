@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/venv
@@ -18,7 +20,8 @@ WORKDIR /app
 
 COPY services/api .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv init --bare --no-cache && uv add -r requirements.txt
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 

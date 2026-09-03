@@ -60,7 +60,7 @@ async def predict_single(
     finally:
         INFERENCE_DURATION.labels(
             mode="single",
-            model=model_info["name"] + model_info["version"],
+            model=model_info["name"] + "-" + model_info["version"],
         ).observe(0.001 * elapsed_ms if elapsed_ms > 0 else (perf_counter() - start))
 
 

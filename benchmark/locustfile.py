@@ -1,6 +1,5 @@
 import json
 import logging
-import math
 import os
 import random
 import time
@@ -101,18 +100,14 @@ def sample_one():
 
 
 def sample_batch(n=None):
-    n = n or random.randint(2, 8)
+    n = n or random.randint(50, 500)
     n = min(n, len(SAMPLES_POOL))
     return [dict(SAMPLES_POOL[i]) for i in random.sample(range(len(SAMPLES_POOL)), k=n)]
 
 
 def make_wait_time(mean, sigma):
-    mu = math.log(mean)
-
     def _wait_time(self):
-        value = random.lognormvariate(mu, sigma)
-        return min(max(value, 0.5), mean * 6)
-
+        return max(0.1, random.gauss(mean, sigma))
     return _wait_time
 
 
@@ -182,18 +177,14 @@ class LegitBaseUser(RakutenUser):
         self._protected_call("POST", "/predict/single", json=sample_one(), name="/predict/single")
 
     @task(3)
-    def predict_batch(self):
-        self._protected_call("POST", "/predict/batch", json=sample_batch(), name="/predict/batch")
-
-    @task(2)
     def check_profile(self):
         self._protected_call("GET", "/auth/me", name="/auth/me")
 
-    @task(1)
+    @task(2)
     def browse_models(self):
         self._protected_call("GET", "/models", name="/models")
 
-    @task(1)
+    @task(5)
     def browse_current_model(self):
         self._protected_call("GET", "/models/current", name="/models/current")
 
@@ -210,11 +201,47 @@ class LegitHeavyUser(LegitBaseUser):
     pass
 
 
-class UnauthorizedRouteUser(LegitBaseUser):
-    @task(4)
-    def hit_restricted_route(self):
-        route = random.choice(CONFIG["restricted_routes"])
-        self._protected_call("GET", route, expect_ok=(403,), name=f"{route} [role=user]")
+class LegitAdminUser(LegitBaseUser):
+    def on_start(self):
+        RakutenUser.on_start(self)
+
+        cred = pick_credential(role="admin")
+        self.username = cred["username"]
+        self.password = cred["password"]
+        self._login()
+
+    @task(5)
+    def predict_single(self):
+        self._protected_call("POST", "/predict/single", json=sample_one(), name="/predict/single")
+
+    @task(30)
+    def predict_batch(self):
+        self._protected_call("POST", "/predict/batch", json=sample_batch(), name="/predict/batch")
+
+    @task(15)
+    def admin_models(self):
+        self._protected_call(
+            "GET",
+            "/models",
+            name="/models [admin]"
+        )
+
+    @task(10)
+    def admin_current_model(self):
+        self._protected_call(
+            "GET",
+            "/models/current",
+            name="/models/current [admin]"
+        )
+
+    @task(3)
+    def admin_profile(self):
+        self._protected_call(
+            "GET",
+            "/auth/me",
+            name="/auth/me [admin]"
+        )
+
 
 
 class UnauthenticatedUser(RakutenUser):
@@ -302,7 +329,7 @@ CLASS_MAP = {
     "unauthenticated": UnauthenticatedUser,
     "unregistered": UnregisteredUser,
     "expired_token": ExpiredTokenUser,
-    "unauthorized_route": UnauthorizedRouteUser,
+    "legit_admin": LegitAdminUser,
 }
 
 def _apply_config_to_user_classes():

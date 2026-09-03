@@ -18,10 +18,12 @@ WORKDIR /app
 
 COPY services/inference .
 
-RUN pip install --no-cache-dir \
-    --index-url https://download.pytorch.org/whl/cpu \
-    torch && \
-    pip install --no-cache-dir -r requirements.txt
+RUN uv init --bare --no-cache && \
+    uv run pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu torch && \
+    uv add -r requirements.txt
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 

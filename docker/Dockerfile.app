@@ -16,7 +16,9 @@ WORKDIR /app
 
 COPY services/streamlit .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv init --bare --no-cache && uv add -r requirements.txt
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8501
 
