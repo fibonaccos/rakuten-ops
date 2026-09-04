@@ -161,8 +161,8 @@ def train_model() -> None:
         history = model.fit(
             X,
             y_onehot,
-            epochs=100,
-            batch_size=128,
+            epochs=5,
+            batch_size=256,
             class_weight=class_weights,
             validation_data=(Xv, yv_onehot), 
             callbacks=[checkpoint_cb],
@@ -190,7 +190,8 @@ def train_model() -> None:
         mlflow.log_artifact(str(ROOT_DIR / params.output.history))
         mlflow.log_artifact(str(ROOT_DIR / params.output.labels_map))
         mlflow.log_artifact(str(ROOT_DIR / params.output.class_weights))
- 
+
+        mlflow.log_artifact(str(ROOT_DIR / "artifacts/embedder.joblib"))
         mlflow.log_artifact(str(ROOT_DIR / "artifacts/scaler.joblib"))
         mlflow.log_artifact(str(ROOT_DIR / "artifacts/pca.joblib"))
         mlflow.log_artifact(str(ROOT_DIR / "artifacts/model.keras"))

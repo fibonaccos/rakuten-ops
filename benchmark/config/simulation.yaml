@@ -1,30 +1,25 @@
 run:
-  users: 45
-  spawn_rate: 0.3
+  users: 100
+  spawn_rate: 5
   run_time: "5h30m"
 
 population:
-  legit_light: 4
-  legit_moderate: 10
-  legit_heavy: 5
+  legit_light: 8
+  legit_moderate: 18
+  legit_heavy: 6
+  legit_admin: 3
   unauthenticated: 2
   unregistered: 1
   expired_token: 2
-  unauthorized_route: 3
 
 wait_time:
-  legit_light:        {mean: 40, sigma: 0.6}
-  legit_moderate:      {mean: 10, sigma: 0.5}
-  legit_heavy:         {mean: 2, sigma: 0.4}
-  unauthenticated:     {mean: 20, sigma: 0.6}
-  unregistered:        {mean: 35, sigma: 0.5}
-  expired_token:       {mean: 15, sigma: 0.5}
-  unauthorized_route:  {mean: 14, sigma: 0.5}
-
-restricted_routes:
-  - "/models"
-  - "/models/current"
-  - "/predict/batch"
+  legit_light:         {mean: 30, sigma: 1}
+  legit_moderate:      {mean: 10, sigma: 0.2}
+  legit_heavy:         {mean: 2, sigma: 0.04}
+  legit_admin:         {mean: 60, sigma: 2}
+  unauthenticated:     {mean: 20, sigma: 0.5}
+  unregistered:        {mean: 50, sigma: 1.5}
+  expired_token:       {mean: 50, sigma: 1.5}
 
 unregistered_usernames:
   - {username: "ghost01", password: "Ghost01@123!"}

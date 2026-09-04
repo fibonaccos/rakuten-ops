@@ -1,89 +1,79 @@
-# Rakuten — plateforme d'inférence
+# Rakuten — MLOps platform
 
-Classification des produits Rakuten en 27 catégories. Le front Streamlit appelle
-une passerelle FastAPI authentifiée par JWT, qui interroge un service d'inférence
-chargeant son modèle depuis MLflow et journalise chaque prédiction en base.
-Prometheus et Grafana supervisent l'ensemble ; Locust sert de banc de charge.
+The repository contains the main components that are used to run a stack of connected Docker containers. The runtime services provide a streamlit app that run on your local machine and reachable at your local host IP address on port 8501. After being connected, you may try to run predictions on new data in the dedicated page. The repository with its DockerHub linked images also provide a simulation of the system using the locust library.
 
-Deux réseaux Docker : `frontend` exposé, `backend` interne. Seuls l'API, MLflow,
-Grafana et le front publient un port.
+## Run the platform
 
-## Démarrer
+There are 2 ways to run the platform on your local machine. Both of them require Docker to be installed in your computer.
 
-```bash
-cp .env.example .env      # puis renseigner chaque valeur
-docker compose up -d
-```
+### Rebuild images
 
-Front sur http://localhost:8501, API sur http://localhost:8000/docs, MLflow sur
-http://localhost:5001, Grafana sur http://localhost:3000. Le banc de charge est
-derrière un profil : `docker compose --profile locust up locust`.
+1. Clone the repository and get to the root of the project.
 
-Les images de la plateforme (`api`, `inference`, `database`, `streamlit`,
-`locust`) sont construites depuis le dépôt, pas tirées d'un registre : ce que la
-stack déploie est donc toujours le code de la branche courante. Le premier
-démarrage prend quelques minutes, les suivants réutilisent le cache.
+    ```bash
+    git clone "https://github.com/fibonaccos/rakuten-ops.git"
 
-Deux échecs courants au premier lancement :
+    cd rakuten-ops
+    ```
 
-- `Bind for 0.0.0.0:8501 failed: port is already allocated` — un autre projet
-  occupe 8000, 8501, 5001 ou 3000. `docker ps` pour voir qui, puis arrêter la
-  stack concernée.
-- `dependency failed to start: container inference-service is unhealthy` — le
-  service d'inférence télécharge le modèle depuis MLflow avant de répondre. Si
-  cela dépasse `start_period`, l'API renonce à démarrer. Relancer
-  `docker compose up -d` suffit, le modèle étant alors en cache.
+2. Build the Docker images.
 
-## Développer
+    ```bash
+    docker build -f docker/Dockerfile.app -t fibonaccos/rakuten-app:1.0.0 .
+    docker build -f docker/Dockerfile.api -t fibonaccos/rakuten-api:1.0.0 .
+    docker build -f docker/Dockerfile.database -t fibonaccos/rakuten-database:1.0.0 .
+    docker build -f docker/Dockerfile.inference -t fibonaccos/rakuten-inference:1.0.0 .
+    docker build -f docker/Dockerfile.locust -t fibonaccos/rakuten-locust:1.0.0 .
+    ```
 
-Dépendances gérées par [uv](https://docs.astral.sh/uv/), en groupes qui
-correspondent aux images : `api`, `inference`, `streamlit`, `ml`, `benchmark`,
-plus `dev` pour l'outillage.
+3. Set all the environment variables according to the [.env.example](.env.example) template file.
 
-```bash
-make install      # uv sync --all-groups
-make lint         # ruff
-make test         # toutes les suites
-```
+4. Run the compose command (with or without optional locust profile) to pull the remaining images and launch the services. Note that this may take several minutes depending on your connection and your computer abilities.
 
-Pour lancer le front seul :
-`uv run --group streamlit streamlit run services/streamlit/app.py`.
+    ```bash
+    docker compose --project-name rakuten up -d  # locust simulation disabled
+    docker compose --project-name rakuten --profile locust up -d  # locust simulation enabled
+    ```
 
-## Tests
+5. Go to `http://localhost:8501` and start using the platform.
 
-Chaque service est une image autonome avec ses propres requirements, et leurs
-modules portent les mêmes noms (`main`, `routes`, `services`) : chaque suite
-tourne donc dans son propre processus.
+### Using DockerHub
 
-```bash
-make test-stack       # docker-compose.yaml conforme à .env.example
-make test-api         # authentification, autorisations, contrat d'inférence
-make test-inference   # routes d'inférence, sur un modèle bouchon
-make test-ui          # client HTTP et rendu de chaque page Streamlit
-make test-ml          # pipeline d'inférence et parité avec l'entraînement
-```
+Note that this method supposes that your computer architecture is one of `amd64` or `arm64` (i.e. supports Linux, macOS and Windows).
 
-`tests/ml/test_cleaning_parity.py` mérite une mention : il vérifie que le
-nettoyage appliqué au service (`model/pipeline.py`) produit exactement le même
-texte que celui appliqué à l'entraînement (`src/rakuten/data/clean_data.py`).
-Une divergence entre les deux est un décalage entraînement/service : le modèle
-reçoit un texte qu'il n'a jamais vu, la qualité chute, et rien ne lève d'erreur.
+1. Pull the platform images from DockerHub.
 
-## Intégration continue
+    ```bash
+    docker pull fibonaccos/rakuten-app:1.0.0
+    docker pull fibonaccos/rakuten-api:1.0.0
+    docker pull fibonaccos/rakuten-database:1.0.0
+    docker pull fibonaccos/rakuten-inference:1.0.0
+    docker pull fibonaccos/rakuten-locust:1.0.0
+    ```
 
-`.github/workflows/ci.yml` tourne sur `main`, `master` et les branches
-`dev-**`, `feature/**`, `fix/**` : lint, puis une suite par groupe de
-dépendances, puis la construction des cinq images.
+2. Set all the environment variables according to the [.env.example](.env.example) template file.
 
-Les règles ruff sont épinglées dans `pyproject.toml` plutôt qu'étendues, la
-sélection par défaut de l'outil s'élargissant d'une version à l'autre. Le tri
-des imports est volontairement exclu : l'activer réécrirait tout le dépôt.
-Quand l'équipe le voudra, `uv run ruff check --select I --fix .`.
+3. Run the compose command (with or without optional locust profile) to pull the remaining images and launch the services. Note that this may take several minutes depending on your connection and your computer abilities.
 
-## Environnement
+    ```bash
+    docker compose --project-name rakuten up -d  # locust simulation disabled
+    docker compose --project-name rakuten --profile locust up -d  # locust simulation enabled
+    ```
 
-Les variables sont documentées dans `.env.example`, préfixées par service
-(`RAKUTEN__API__*`, `RAKUTEN__INFERENCE__*`, `RAKUTEN__LOCUST__*`,
-`RAKUTEN__GRAFANA__*`). Chaque service les valide au démarrage : une variable
-manquante arrête le conteneur au lieu de le laisser servir à moitié configuré.
-`.env` n'est jamais versionné, et un test le vérifie.
+4. Go to `http://localhost:8501` and start using the platform.
+
+**Note :**
+
+- The `locust` image is optional and is only needed if you want to simulate the consumption of the services. Make sure that your computer can support the load of the services.
+- The allowed `(username, password)` pairs registered in the database and used to login can be found in the file [passwords.json](./benchmark/config/passwords.json). ***These are placeholders and do not grant access to any kind of real world secured service.***
+
+## About this project
+
+You can find some documentation about the underlying architecture in the [docs](./docs/).
+
+This project has been developed by the following people :
+
+- Rizlène Banat, GitHub : [rbanat](https://github.com/rbanat)
+- Romain Mazoyer, GitHub : [Romain057](https://github.com/Romain057)
+- Steve Trincal, GitHub : [SteeveGitHub](https://github.com/SteeveGitHub)
+- Bryan KHAN MAHMOOD, GitHub : [fibonaccos](https://github.com/fibonaccos)

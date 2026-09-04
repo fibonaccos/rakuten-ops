@@ -27,7 +27,7 @@ features:
     metadata: "data/features/metadata.json"
   split:
     target: "prdtypecode"
-    n_use: 1000
+    n_use: -1
     train_size: 0.7
     val_size: 0.15   
     test_size: 0.15  
@@ -37,12 +37,14 @@ features:
     columns:
       - "designation"
       - "description"
-    chunk_size: 150
-    overlap: 30
+    ngram_range: [1, 2]
+    max_features: 2000
   statistic:
     columns:
       - "designation"
       - "description"
+  embedder:
+    artifact: "artifacts/embedder.joblib"
   scale:
     artifact: "artifacts/scaler.joblib"
   pca:

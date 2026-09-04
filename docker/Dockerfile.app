@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/venv
@@ -8,15 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m venv $VIRTUAL_ENV
-
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 WORKDIR /app
 
 COPY services/streamlit .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv init --bare --no-cache
+RUN uv add -r requirements.txt
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8501
 

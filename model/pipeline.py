@@ -9,8 +9,8 @@ import re
 import unicodedata
 
 from lxml import html
-from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import StandardScaler
 from time import perf_counter
 from typing import Any
@@ -18,26 +18,6 @@ from typing import Any
 
 InferenceSingleResponse = tuple[str, float, dict[str, float], float]
 InferenceBatchResponse = tuple[list[tuple[str, float, dict[str, float]]], float, float]
-
-
-def _chunk(text: str, chunk_size: int, overlap: int) -> list[str]:
-    if not isinstance(text, str):
-        return [""]
-    words = text.split()
-    if len(words) <= chunk_size:
-        return [text]
-    chunks: list[str] = []
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = words[i:i + chunk_size]
-        chunks.append(" ".join(chunk))
-    return chunks
-
-
-def _embed(text: str, model: SentenceTransformer, chunk_size: int, overlap: int) -> np.ndarray:
-    chunks = _chunk(text, chunk_size, overlap)
-    chunk_embeddings = model.encode(chunks)
-    document_embedding = np.mean(chunk_embeddings, axis=0)
-    return document_embedding
 
 
 def _compute_statistics(designation: str, description: str) -> np.ndarray:
@@ -155,13 +135,9 @@ class Embedder:
     def __init__(
         self,
         /,
-        model: SentenceTransformer,
-        chunk_size: int,
-        overlap: int
+        model: TfidfVectorizer
     ) -> None:
-        self._embedder_model: SentenceTransformer = model
-        self._chunk_size: int = chunk_size
-        self._overlap: int = overlap
+        self._embedder_model: TfidfVectorizer = model
 
     def __call__(
         self,
@@ -173,12 +149,8 @@ class Embedder:
         return self._embed_batch(inputs)
 
     def _embed_single(self, /, inputs: tuple[str, str]) -> np.ndarray:
-        return _embed(
-            inputs[0] + " " + inputs[1],
-            self._embedder_model,
-            self._chunk_size,
-            self._overlap
-        )
+        x = inputs[0] + " " + inputs[1]
+        return np.array(self._embedder_model.transform([x]).todense()).reshape((-1, ))
 
     def _embed_batch(self, /, inputs: list[tuple[str, str]]) -> np.ndarray:
         return np.array([self._embed_single(x) for x in inputs])
@@ -190,15 +162,9 @@ class Preprocessor:
         /,
         embedder_uri: str,
         scaler_uri: str,
-        reducer_uri: str,
-        chunk_size: int,
-        overlap: int
+        reducer_uri: str
     ) -> None:
-        self._embedder: Embedder = Embedder(
-            SentenceTransformer(embedder_uri, local_files_only=True),
-            chunk_size=chunk_size,
-            overlap=overlap
-        )
+        self._embedder: Embedder = Embedder(joblib.load(embedder_uri))
         self._scaler: StandardScaler = joblib.load(scaler_uri)
         self._reducer: PCA = joblib.load(reducer_uri)
         return None
@@ -242,17 +208,13 @@ class InferencePipeline:
         embedder_uri: str,
         scaler_uri: str,
         reducer_uri: str,
-        chunk_size: int,
-        overlap: int,
         labels_map: dict[str, int]
     ) -> None:
         self._cleaner: Cleaner = Cleaner()
         self._preprocessor: Preprocessor = Preprocessor(
             embedder_uri=embedder_uri,
             scaler_uri=scaler_uri,
-            reducer_uri=reducer_uri,
-            chunk_size=chunk_size,
-            overlap=overlap
+            reducer_uri=reducer_uri
         )
         self._model: _Model = _Model(model_uri)
         self._labels_map: dict[int, str] = {k: v for v, k in labels_map.items()}
@@ -280,6 +242,7 @@ class InferencePipeline:
         inputs: list[tuple[str, str | None]]
     ) -> InferenceBatchResponse:
         start: float = perf_counter()
+        print("cleaning : ", self._cleaner(inputs))
         y: list[list[float]] = self._model(self._preprocessor(self._cleaner(inputs)))
         y = [[float(v) for v in output] for output in y]
         categories: list[str] = [str(self._labels_map[c.index(max(c))]) for c in y]

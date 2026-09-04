@@ -25,17 +25,16 @@ class RakutenModel(PythonModel):
     """
 
     def load_context(self, context) -> None:
-        cfg = dict(context.model_config or {})
         if sys.platform in ("linux", "darwin"):
             ctx_model = _convert_path_to_posix(context.artifacts["keras_model"])
             ctx_labels_map = _convert_path_to_posix(context.artifacts["labels_map"])
-            ctx_embedder_uri = _convert_path_to_posix(context.artifacts.get("embedder") or cfg["embedder_name"])
+            ctx_embedder_uri = _convert_path_to_posix(context.artifacts["embedder"])
             ctx_scaler = _convert_path_to_posix(context.artifacts["scaler"])
             ctx_pca = _convert_path_to_posix(context.artifacts["pca"])
         else:
             ctx_model = context.artifacts["keras_model"]
             ctx_labels_map = context.artifacts["labels_map"]
-            ctx_embedder_uri = context.artifacts.get("embedder") or cfg["embedder_name"]
+            ctx_embedder_uri = context.artifacts["embedder"]
             ctx_scaler = context.artifacts["scaler"]
             ctx_pca = context.artifacts["pca"]
 
@@ -47,8 +46,6 @@ class RakutenModel(PythonModel):
             embedder_uri=ctx_embedder_uri,
             scaler_uri=ctx_scaler,
             reducer_uri=ctx_pca,
-            chunk_size=int(cfg["chunk_size"]),
-            overlap=int(cfg["overlap"]),
             labels_map=labels_map,
         )
         return None

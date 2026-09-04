@@ -9,8 +9,8 @@ from pathlib import Path
 from rich.progress import (
     Progress, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 )
-from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from typing import Any
@@ -73,69 +73,14 @@ def split(
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 
-
-def _chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
-    """
-    Utility function to chunk texts before encoding as some of the data may be larger
-    than the maximum supported tokens of the embedding model.
-
-    Args:
-        text (str): The text to chunk.
-        chunk_size (int): The size (number of words) of each chunks.
-        overlap (int): The number of words overlaping between each chunk.
-
-    Returns:
-        list[str]: The chunks of the given text.
-    """
-
-    if not isinstance(text, str):
-        return [""]
-    words = text.split()
-    if len(words) <= chunk_size:
-        return [text]
-    chunks: list[str] = []
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = words[i:i + chunk_size]
-        chunks.append(" ".join(chunk))
-    return chunks
-
-
-def _embed(
-        model: SentenceTransformer,
-        text: str,
-        chunk_size: int,
-        overlap: int
-    ) -> np.ndarray:
-    """
-    Utility function to embed a chunked text using a SentenceTransformer model.
-    Whenever the text is splitted into multiple chunks, the final embedding is computed
-    by averaging the embedding of each chunk.
-
-    Args:
-        model (SentenceTransformer): The embedding model.
-        text (str): The text to encode.
-        chunk_size (int): The size of each chunk. Must fit with the maximum supported
-            tokens of the model.
-        overlap (int): The number of words overlaping between each chunk.
-
-    Returns:
-        np.ndarray: The embedding of the text.
-    """
-
-    chunks = _chunk_text(text, chunk_size, overlap)
-    chunk_embeddings = model.encode(chunks)
-    document_embedding = np.mean(chunk_embeddings, axis=0)
-    return document_embedding
-
-
 def make_embeddings(
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
         columns: list[str],
         product_id: str,
-        chunk_size: int,
-        overlap: int
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        ngram_range: tuple[int, int],
+        max_features: int
+    ) -> tuple[pd.DataFrame, pd.DataFrame, TfidfVectorizer]:
     """
     Create embeddings of the train and test dataset. As the embedding model is **not**
     fitted on the data, the processes applied on the train and the test set are equal.
@@ -165,7 +110,8 @@ def make_embeddings(
     X_train["combined"] = X_train["combined"]
     X_test["combined"] = X_test["combined"]
 
-    model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+    model = TfidfVectorizer(ngram_range=ngram_range, max_features=max_features)
+    model = model.fit(X_train["combined"])
 
     with Progress(
         TextColumn("[bold blue]{task.description}"),
@@ -177,7 +123,7 @@ def make_embeddings(
         task = progress.add_task("Embedding train", total=X_train.shape[0])
         embedding_list = []
         for text in X_train["combined"]:
-            embedding_list.append(_embed(model, text, chunk_size, overlap))
+            embedding_list.append(np.array(model.transform([text]).todense()).reshape((-1, )))
             progress.update(task, advance=1)
 
     embeddings_train = np.array(embedding_list)
@@ -198,7 +144,7 @@ def make_embeddings(
         task = progress.add_task("Embedding test", total=X_test.shape[0])
         embedding_list = []
         for text in X_test["combined"]:
-            embedding_list.append(_embed(model, text, chunk_size, overlap))
+            embedding_list.append(np.array(model.transform([text]).todense()).reshape((-1, )))
             progress.update(task, advance=1)
 
     embeddings_test = np.array(embedding_list)
@@ -209,7 +155,7 @@ def make_embeddings(
         embed_test.reset_index(drop=True)
     ], axis=1)
 
-    return out_train, out_test
+    return out_train, out_test, model
 
 
 def create_features(
@@ -395,12 +341,12 @@ def build() -> None:
  
     X_holdout = pd.concat([X_val, X_test], ignore_index=True)
  
-    embed_train, embed_holdout = make_embeddings(
+    embed_train, embed_holdout, embedder = make_embeddings(
         X_train, X_holdout,
         params.embedding.columns,
         params.product_id,
-        params.embedding.chunk_size,
-        params.embedding.overlap
+        tuple(params.embedding.ngram_range),
+        params.embedding.max_features
     )
  
     created_train, created_holdout = create_features(
@@ -438,7 +384,10 @@ def build() -> None:
     save(y_train, str(CONFIG_DIR / params.output.folder / "y_train.parquet"))
     save(y_val, str(CONFIG_DIR / params.output.folder / "y_val.parquet"))
     save(y_test, str(CONFIG_DIR / params.output.folder / "y_test.parquet"))
- 
+
+    with open(CONFIG_DIR / params.embedder.artifact, "wb") as f:
+        joblib.dump(embedder, f)
+
     with open(CONFIG_DIR / params.scale.artifact, "wb") as f:
         joblib.dump(sc, f)
  
@@ -447,8 +396,7 @@ def build() -> None:
  
     metadata: dict[str, Any] = {}
     metadata["embedder"] = {
-        "path": "",
-        "model": "paraphrase-multilingual-MiniLM-L12-v2"
+        "path": str(CONFIG_DIR / params.embedder.artifact),
     }
     metadata["scaler"] = {
         "path": str(CONFIG_DIR / params.scale.artifact)

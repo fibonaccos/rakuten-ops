@@ -3,6 +3,7 @@
 /data
 /tracking
 /benchmark/reports/
+/benchmark/data/
 ./scripts/passwords.md
 /tracking/*
 __pycache__
@@ -287,3 +288,4 @@ Backups.backupdb
 .MobileBackups.trash
 MobileBackups.trash
 tmbootpicker.efi
+scripts/.env.monitoring

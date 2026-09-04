@@ -15,6 +15,8 @@ services:
       RAKUTEN__API__DATABASE_PASSWORD: ${RAKUTEN__API__DATABASE_PASSWORD}
       RAKUTEN__LOCUST__DATABASE_USER: ${RAKUTEN__LOCUST__DATABASE_USER}
       RAKUTEN__LOCUST__DATABASE_PASSWORD: ${RAKUTEN__LOCUST__DATABASE_PASSWORD}
+      RAKUTEN__AIRFLOW__DATABASE_USER: ${RAKUTEN__AIRFLOW__DATABASE_USER}
+      RAKUTEN__AIRFLOW__DATABASE_PASSWORD: ${RAKUTEN__AIRFLOW__DATABASE_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -67,7 +69,7 @@ services:
     env_file:
       - ".env"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://0.0.0.0:$${RAKUTEN__INFERENCE__PORT}/health"]
+      test: ["CMD-SHELL", "curl -f http://0.0.0.0:8000/health"]
       interval: 60s
       timeout: 5s
       retries: 5
@@ -109,9 +111,6 @@ services:
       - "8501:8501"
     networks:
       - frontend
-      # Also on backend so the blackbox exporter, which lives there, can probe
-      # it. Without this the streamlit probe reports down on a healthy service.
-      - backend
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://0.0.0.0:8501/health"]
       interval: 10s
@@ -202,7 +201,8 @@ services:
       - backend
     environment:
       SIMULATION_CONFIG: ${RAKUTEN__LOCUST__SIMULATION_CONFIG}
-      DATA_FILE: ${RAKUTEN__LOCUST__DATA_FILE}
+      DATA_PATH: ${RAKUTEN__LOCUST__DATA_PATH}
+      BATCH_SIZE: 5000
       DATABASE_URL: postgresql://${RAKUTEN__LOCUST__DATABASE_USER}:${RAKUTEN__LOCUST__DATABASE_PASSWORD}@${RAKUTEN__LOCUST__DATABASE_HOST}:${RAKUTEN__LOCUST__DATABASE_PORT}/${RAKUTEN__LOCUST__DATABASE_NAME}
       PASSWORD_FILE: ${RAKUTEN__LOCUST__PASSWORDS_FILE}
       TARGET_BASE_URL: http://api-service:8000

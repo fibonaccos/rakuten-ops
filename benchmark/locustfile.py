@@ -1,14 +1,16 @@
 import json
 import logging
-import math
 import os
 import random
 import time
+import threading
 
 import pandas as pd
 import psycopg2
 import yaml
 from locust import HttpUser, events, task
+from pathlib import Path
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("rakuten-locust")
@@ -62,12 +64,17 @@ def load_credential_pool(retries=10, delay=3):
     raise RuntimeError(f"Impossible de charger le pool d'identifiants depuis la base: {last_err}")
 
 
-def load_samples_pool():
-    path = os.environ["DATA_FILE"]
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "500"))
+DATA_PATH = Path(os.environ["DATA_PATH"])
+
+
+def load_samples_file(path):
     df = pd.read_parquet(path)
     if "designation" not in df.columns:
-        raise RuntimeError(f"colonne 'designation' absente de {path} (colonnes: {list(df.columns)})")
-
+        raise RuntimeError(
+            f"colonne 'designation' absente de {path} "
+            f"(colonnes: {list(df.columns)})"
+        )
     has_description = "description" in df.columns
     records = []
     for row in df.itertuples(index=False):
@@ -75,18 +82,100 @@ def load_samples_pool():
         description = getattr(row, "description") if has_description else None
         if pd.isna(description):
             description = None
-        records.append({"designation": designation, "description": description})
-
+        records.append({
+            "designation": designation,
+            "description": description,
+        })
     if not records:
         raise RuntimeError(f"{path} ne contient aucune ligne exploitable")
-
-    log.info("Pool d'echantillons d'inference charge: %d lignes", len(records))
+    log.info(
+        "Pool d'echantillons charge: %d lignes depuis %s",
+        len(records),
+        path.name,
+    )
     return records
+
+
+class SamplesPoolManager:
+    def __init__(self, data_path, batch_size):
+        self.batch_size = batch_size
+        self.counter = 0
+        self.file_index = 0
+        self.lock = threading.Lock()
+        if data_path.is_dir():
+            self.files = sorted(data_path.glob("*.parquet"))
+        else:
+            self.files = [data_path]
+        if not self.files:
+            raise RuntimeError(
+                f"Aucun fichier parquet trouvé dans {data_path}"
+            )
+        log.info(
+            "Pool de données: %d fichier(s), BATCH_SIZE=%d",
+            len(self.files),
+            self.batch_size,
+        )
+        for i, path in enumerate(self.files):
+            log.info("  [%d] %s", i, path.name)
+        self.current_pool = load_samples_file(self.files[0])
+
+    def _rotate_if_needed(self):
+        if self.counter < self.batch_size:
+            return
+        self.counter = 0
+        self.file_index = (
+            self.file_index + 1
+        ) % len(self.files)
+        next_file = self.files[self.file_index]
+        log.info(
+            "BATCH_SIZE atteint -> fichier suivant: %s",
+            next_file.name,
+        )
+        self.current_pool = load_samples_file(next_file)
+
+    def sample_one(self):
+        with self.lock:
+            sample = dict(
+                self.current_pool[
+                    random.randrange(len(self.current_pool))
+                ]
+            )
+            self.counter += 1
+            self._rotate_if_needed()
+            return sample
+
+    def sample_batch(self, n=None):
+        with self.lock:
+            n = n or random.randint(50, 500)
+            n = min(n, len(self.current_pool))
+            samples = [
+                dict(self.current_pool[i])
+                for i in random.sample(
+                    range(len(self.current_pool)),
+                    k=n,
+                )
+            ]
+            self.counter += n
+            self._rotate_if_needed()
+            return samples
+
+
+SAMPLES_MANAGER = SamplesPoolManager(
+    DATA_PATH,
+    BATCH_SIZE,
+)
+
+
+def sample_one():
+    return SAMPLES_MANAGER.sample_one()
+
+
+def sample_batch(n=None):
+    return SAMPLES_MANAGER.sample_batch(n)
 
 
 CONFIG = load_config()
 CREDENTIAL_POOL = load_credential_pool()
-SAMPLES_POOL = load_samples_pool()
 
 
 def pick_credential(role=None):
@@ -96,22 +185,44 @@ def pick_credential(role=None):
     return random.choice(pool)
 
 
-def sample_one():
-    return dict(SAMPLES_POOL[random.randrange(len(SAMPLES_POOL))])
+TRAFFIC_STATE = {
+    "factor": 1.0,
+    "target": 1.0,
+    "next_change": 0.0,
+}
 
 
-def sample_batch(n=None):
-    n = n or random.randint(2, 8)
-    n = min(n, len(SAMPLES_POOL))
-    return [dict(SAMPLES_POOL[i]) for i in random.sample(range(len(SAMPLES_POOL)), k=n)]
+def update_traffic_factor():
+    now = time.monotonic()
+    if now < TRAFFIC_STATE["next_change"]:
+        return
+    regimes = [
+        (0.35, 0.70),
+        (0.50, 0.80),
+        (0.65, 1.00),
+        (0.85, 1.20),
+        (0.95, 1.30),
+        (1.30, 1.80),
+        (1.50, 2.20),
+        (2.00, 3.00),
+    ]
+    target_min, target_max = random.choice(regimes)
+    TRAFFIC_STATE["target"] = random.uniform(target_min, target_max)
+    TRAFFIC_STATE["next_change"] = now + random.uniform(30, 180)
 
 
 def make_wait_time(mean, sigma):
-    mu = math.log(mean)
-
     def _wait_time(self):
-        value = random.lognormvariate(mu, sigma)
-        return min(max(value, 0.5), mean * 6)
+        update_traffic_factor()
+        current = TRAFFIC_STATE["factor"]
+        target = TRAFFIC_STATE["target"]
+
+        current += (target - current) * 0.05
+        TRAFFIC_STATE["factor"] = current
+
+        base_wait = random.gauss(mean, sigma)
+        effective_wait = base_wait / current
+        return max(0.1, effective_wait)
 
     return _wait_time
 
@@ -182,18 +293,14 @@ class LegitBaseUser(RakutenUser):
         self._protected_call("POST", "/predict/single", json=sample_one(), name="/predict/single")
 
     @task(3)
-    def predict_batch(self):
-        self._protected_call("POST", "/predict/batch", json=sample_batch(), name="/predict/batch")
-
-    @task(2)
     def check_profile(self):
         self._protected_call("GET", "/auth/me", name="/auth/me")
 
-    @task(1)
+    @task(2)
     def browse_models(self):
         self._protected_call("GET", "/models", name="/models")
 
-    @task(1)
+    @task(5)
     def browse_current_model(self):
         self._protected_call("GET", "/models/current", name="/models/current")
 
@@ -210,11 +317,46 @@ class LegitHeavyUser(LegitBaseUser):
     pass
 
 
-class UnauthorizedRouteUser(LegitBaseUser):
-    @task(4)
-    def hit_restricted_route(self):
-        route = random.choice(CONFIG["restricted_routes"])
-        self._protected_call("GET", route, expect_ok=(403,), name=f"{route} [role=user]")
+class LegitAdminUser(LegitBaseUser):
+    def on_start(self):
+        RakutenUser.on_start(self)
+
+        cred = pick_credential(role="admin")
+        self.username = cred["username"]
+        self.password = cred["password"]
+        self._login()
+
+    @task(5)
+    def predict_single(self):
+        self._protected_call("POST", "/predict/single", json=sample_one(), name="/predict/single")
+
+    @task(30)
+    def predict_batch(self):
+        self._protected_call("POST", "/predict/batch", json=sample_batch(), name="/predict/batch")
+
+    @task(15)
+    def admin_models(self):
+        self._protected_call(
+            "GET",
+            "/models",
+            name="/models [admin]"
+        )
+
+    @task(10)
+    def admin_current_model(self):
+        self._protected_call(
+            "GET",
+            "/models/current",
+            name="/models/current [admin]"
+        )
+
+    @task(3)
+    def admin_profile(self):
+        self._protected_call(
+            "GET",
+            "/auth/me",
+            name="/auth/me [admin]"
+        )
 
 
 class UnauthenticatedUser(RakutenUser):
@@ -302,7 +444,7 @@ CLASS_MAP = {
     "unauthenticated": UnauthenticatedUser,
     "unregistered": UnregisteredUser,
     "expired_token": ExpiredTokenUser,
-    "unauthorized_route": UnauthorizedRouteUser,
+    "legit_admin": LegitAdminUser,
 }
 
 def _apply_config_to_user_classes():
@@ -321,10 +463,6 @@ def _on_test_start(environment, **kwargs):
     log.info(
         "users=%s spawn_rate=%s run_time=%s",
         CONFIG["run"]["users"], CONFIG["run"]["spawn_rate"], CONFIG["run"]["run_time"],
-    )
-    log.info(
-        "pool identifiants=%d comptes | pool echantillons=%d lignes",
-        len(CREDENTIAL_POOL), len(SAMPLES_POOL),
     )
     for key, cls in CLASS_MAP.items():
         wt = CONFIG["wait_time"][key]
