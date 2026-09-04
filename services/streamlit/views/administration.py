@@ -33,8 +33,6 @@ token = st.session_state.token
 st.success(f"Connecté en tant qu'admin : **{st.session_state.username}**")
 
 # ── Backend readiness ────────────────────────────────────────────────────────
-# /ready is admin-only and already reports the three services the platform needs;
-# showing it here saves a round trip through curl during a demo.
 st.subheader("État de la plateforme")
 
 if st.button("Rafraîchir"):

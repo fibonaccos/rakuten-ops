@@ -1,9 +1,10 @@
-"""Home page: search bar + hero banner + a catalog of listings, filterable by category.
+"""Home page: search bar + hero banner + a catalog of listings.
 
-The catalog (`data/demo_products.csv`) is a small sample built from the real
-training data (X_train.csv / Y_train.csv) — it becomes a live API call once a
-"browse listings" endpoint exists. Reading it, and the ordering of the category
-chips, both live in services/catalog.py so the sell page can reuse them.
+Category filtering is driven by the sidebar (st.session_state.category_filter,
+see services/ui.py) rather than a widget on this page.
+
+Reading the catalogue, and the ordering of the category chips, both live in
+services/catalog.py so the sell page can reuse them.
 """
 
 from math import ceil
@@ -18,7 +19,6 @@ from services.catalog import (
     search,
 )
 
-TOP_CATEGORIES_VISIBLE = 5
 PRODUCTS_PER_PAGE = 10
 FEATURED_CATEGORIES = 9
 
@@ -35,7 +35,7 @@ def render_product_grid(products: list[dict]) -> None:
         with columns[index % 3], st.container(border=True):
             image_path = image_for(product)
             if image_path:
-                st.image(str(image_path), use_container_width=True)
+                st.image(str(image_path), width="stretch")
             else:
                 st.markdown(
                     f"<div class='product-thumb'>{product['emoji']}</div>",
@@ -72,6 +72,11 @@ def render_pagination(total_items: int) -> None:
             st.rerun()
 
 
+def article_count(n: int) -> str:
+    """Pluralize "article" correctly: '1 article', '2 articles'."""
+    return f"{n} article" if n <= 1 else f"{n} articles"
+
+
 def reset_page_on_change(key: str, value) -> None:
     """Send the reader back to page 1 whenever the search or the filter changes."""
     if value != st.session_state.get(key):
@@ -82,13 +87,18 @@ def reset_page_on_change(key: str, value) -> None:
 # --- Session state defaults ---
 if "page" not in st.session_state:
     st.session_state.page = 1
-if "show_all_categories" not in st.session_state:
-    st.session_state.show_all_categories = False
 
-# --- Search bar (top of the page) ---
-search_query = st.text_input(
-    "Rechercher un produit", placeholder="Ex : manteau laine, figurine, vélo..."
-)
+# --- Search bar (top of the page, styled like rakuten.fr) ---
+with st.container(key="search-bar"):
+    col_input, col_btn = st.columns([9, 1])
+    with col_input:
+        search_query = st.text_input(
+            "Rechercher un produit",
+            placeholder="Rechercher un produit",
+            label_visibility="collapsed",
+        )
+    with col_btn:
+        st.button("🔍")
 reset_page_on_change("last_query", search_query)
 
 st.markdown(
@@ -102,12 +112,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-categories = categories_by_popularity()
-
 if search_query:
     results = search(search_query)
 
-    st.subheader(f"Résultats pour « {search_query} » ({len(results)})")
+    st.subheader(f"Résultats pour « {search_query} » ({article_count(len(results))})")
     if results:
         render_product_grid(render_page(results))
         render_pagination(len(results))
@@ -115,28 +123,17 @@ if search_query:
         st.info("Aucun produit ne correspond à cette recherche.")
 
 else:
-    # Only the top 5 categories are shown by default; "+" reveals the rest.
-    visible = categories if st.session_state.show_all_categories else categories[:TOP_CATEGORIES_VISIBLE]
-    selected_category = st.pills("Catégories", list(visible), selection_mode="single")
-
-    toggle_label = (
-        "− Moins de catégories"
-        if st.session_state.show_all_categories
-        else f"+ Voir les {len(categories) - TOP_CATEGORIES_VISIBLE} autres catégories"
-    )
-    if st.button(toggle_label):
-        st.session_state.show_all_categories = not st.session_state.show_all_categories
-        st.rerun()
-
+    selected_category = st.session_state.get("category_filter")
     reset_page_on_change("last_category", selected_category)
 
     if selected_category:
         filtered = products_in_category(selected_category)
 
-        st.subheader(f"Produits — {selected_category} ({len(filtered)})")
+        st.subheader(f"Produits — {selected_category} ({article_count(len(filtered))})")
         render_product_grid(render_page(filtered))
         render_pagination(len(filtered))
     else:
+        categories = categories_by_popularity()
         st.subheader("Top des produits")
         st.caption(f"{len(load_products())} annonces réparties sur {len(categories)} catégories.")
         # One featured item per top category, to keep the homepage preview short.
@@ -145,10 +142,3 @@ else:
             for category in categories[:FEATURED_CATEGORIES]
         ]
         render_product_grid(featured)
-
-st.divider()
-
-if st.session_state.token:
-    st.page_link("views/vendre.py", label="Vendre un produit", icon="🛒")
-else:
-    st.page_link("views/connexion.py", label="Se connecter pour vendre", icon="🔑")

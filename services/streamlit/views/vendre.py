@@ -41,7 +41,6 @@ with st.form("annonce"):
 
 if submitted and not designation:
     st.warning("Le titre est obligatoire pour lancer la classification.")
-
 elif submitted:
     result = None
     with st.spinner("Classification en cours..."):
@@ -75,7 +74,7 @@ elif submitted:
                 with column, st.container(border=True):
                     photo = image_for(product)
                     if photo:
-                        st.image(str(photo), use_container_width=True)
+                        st.image(str(photo), width="stretch")
                     else:
                         st.markdown(
                             f"<div class='product-thumb'>{product['emoji']}</div>",
