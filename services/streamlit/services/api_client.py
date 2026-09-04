@@ -63,17 +63,6 @@ def predict(token: str, designation: str, description: str = "") -> dict:
     return _call("POST", "/predict/single", token=token, json=payload)
 
 
-def label_prediction(token: str, inference_id: int, labeled_category: str) -> dict:
-    """Confirm or correct a previous single prediction.
-
-    Send the predicted category itself to confirm it, or a different one to
-    correct it. Only the user who made the original prediction can label it
-    (enforced server-side). Returns {inference_id, labeled_category, matched_prediction}.
-    """
-    payload = {"labeled_category": labeled_category}
-    return _call("PATCH", f"/predict/{inference_id}/label", token=token, json=payload)
-
-
 def get_models(token: str) -> list[dict]:
     """Return every model in the registry: [{name, version, published_at}, ...].
 
