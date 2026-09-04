@@ -45,6 +45,12 @@ class PredictionOutput(BaseModel):
 class SinglePredictionMetadata(BaseModel):
     """Metadata of a single prediction."""
 
+    inference_id: int | None = Field(
+        default=None,
+        description="Identifier of this prediction in the inference log. Set after "
+        "the prediction is persisted; use it to confirm or correct the category "
+        "afterward via PATCH /predict/{inference_id}/label."
+    )
     model_info: ModelInfo = Field(
         ...,
         description="Information about the model used for prediction."
@@ -118,4 +124,26 @@ class BatchPredictionResponse(BaseModel):
     metadata: BatchPredictionMetadata = Field(
         ...,
         description="Metadata of a batch inference job."
+    )
+
+
+class LabelPredictionRequest(BaseModel):
+    """Body sent by the client to confirm or correct a previous prediction."""
+
+    labeled_category: str = Field(
+        ...,
+        description="The category confirmed (same as predicted) or corrected "
+        "(chosen by the user) by whoever made the original request."
+    )
+
+
+class LabelPredictionResponse(BaseModel):
+    """Result of confirming or correcting a previous prediction."""
+
+    inference_id: int = Field(..., description="Identifier of the labeled prediction.")
+    labeled_category: str = Field(..., description="The category that was recorded.")
+    matched_prediction: bool = Field(
+        ...,
+        description="True if the user confirmed the model's prediction, False if "
+        "they corrected it to a different category."
     )

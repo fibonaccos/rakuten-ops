@@ -83,3 +83,28 @@ class InferenceRepository:
         )
         await self.session.commit()
         return inferences
+
+    async def update_label(
+        self,
+        inference_id: int,
+        user_id: int,
+        labeled_category: str
+    ) -> Inference | None:
+        """
+        Set the confirmed/corrected category for a prediction.
+
+        Only the user who made the original prediction can label it -- returns
+        None (not an exception) if the inference doesn't exist or belongs to
+        someone else, so the caller can turn that into a clean 404 without
+        leaking whether the id exists at all.
+        """
+        result = await self.session.execute(
+            select(Inference).where(Inference.inference_id == inference_id)
+        )
+        inference = result.scalar_one_or_none()
+        if inference is None or inference.user_id != user_id:
+            return None
+        inference.labeled_category = labeled_category
+        await self.session.commit()
+        await self.session.refresh(inference)
+        return inference
