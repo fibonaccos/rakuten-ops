@@ -1,6 +1,6 @@
 services:
   database:
-    image: fibonaccos/rakuten-database:0.1.0
+    image: fibonaccos/rakuten-database:1.0.0
     container_name: ${RAKUTEN__API__DATABASE_HOST}
     networks:
       - backend
@@ -36,7 +36,7 @@ services:
     volumes:
       - ./tracking:/mlflow/tracking
     environment:
-      MLFLOW_SERVER_ALLOWED_HOSTS: "localhost:5001,${RAKUTEN__API__MLFLOW_HOST}:${RAKUTEN__API__MLFLOW_PORT}"
+      MLFLOW_SERVER_ALLOWED_HOSTS: "localhost:5001,${RAKUTEN__API__MLFLOW_HOST}:5000"
     command:
       - mlflow
       - server
@@ -54,7 +54,7 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request;urllib.request.urlopen('http://0.0.0.0:${RAKUTEN__API__MLFLOW_PORT}/health')"
+        - "import urllib.request;urllib.request.urlopen('http://0.0.0.0:5000/health')"
       interval: 10s
       timeout: 5s
       retries: 5
@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
 
   inference:
-    image: fibonaccos/rakuten-inference:0.1.0
+    image: fibonaccos/rakuten-inference:1.0.0
     container_name: ${RAKUTEN__API__INFERENCE_HOST}
     networks:
       - backend
@@ -80,7 +80,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: fibonaccos/rakuten-api:0.1.0
+    image: fibonaccos/rakuten-api:1.0.0
     container_name: api-service
     networks:
       - frontend
@@ -103,7 +103,7 @@ services:
     restart: unless-stopped
 
   streamlit:
-    image: fibonaccos/rakuten-app:0.1.0
+    image: fibonaccos/rakuten-app:1.0.0
     container_name: streamlit-service
     environment:
       API_BASE_URL: http://api-service:8000
@@ -111,6 +111,7 @@ services:
       - "8501:8501"
     networks:
       - frontend
+      - blackbox_streamlit
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://0.0.0.0:8501/health"]
       interval: 10s
@@ -127,6 +128,7 @@ services:
     container_name: blackbox-exporter-service
     networks:
       - backend
+      - blackbox_streamlit
     volumes:
       - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     restart: unless-stopped
@@ -195,7 +197,7 @@ services:
     restart: unless-stopped
 
   locust:
-    image: fibonaccos/rakuten-locust:0.1.0
+    image: fibonaccos/rakuten-locust:1.0.0
     container_name: "locust-service"
     networks:
       - backend
@@ -203,7 +205,7 @@ services:
       SIMULATION_CONFIG: ${RAKUTEN__LOCUST__SIMULATION_CONFIG}
       DATA_PATH: ${RAKUTEN__LOCUST__DATA_PATH}
       BATCH_SIZE: 5000
-      DATABASE_URL: postgresql://${RAKUTEN__LOCUST__DATABASE_USER}:${RAKUTEN__LOCUST__DATABASE_PASSWORD}@${RAKUTEN__LOCUST__DATABASE_HOST}:${RAKUTEN__LOCUST__DATABASE_PORT}/${RAKUTEN__LOCUST__DATABASE_NAME}
+      DATABASE_URL: postgresql://${RAKUTEN__LOCUST__DATABASE_USER}:${RAKUTEN__LOCUST__DATABASE_PASSWORD}@${RAKUTEN__LOCUST__DATABASE_HOST}:5432/${RAKUTEN__LOCUST__DATABASE_NAME}
       PASSWORD_FILE: ${RAKUTEN__LOCUST__PASSWORDS_FILE}
       TARGET_BASE_URL: http://api-service:8000
     volumes:
@@ -227,6 +229,10 @@ networks:
   frontend:
     name: frontend_network
     driver: bridge
+  blackbox_streamlit:
+    name: blackbox_streamlit_network
+    driver: bridge
+    internal: true
 
 volumes:
   postgres_data:

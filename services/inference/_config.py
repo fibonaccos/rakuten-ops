@@ -18,10 +18,7 @@ class Settings(BaseSettings):
         str_strip_whitespace=True
     )
 
-    port: int = Field(default=..., description="Port on which the API runs.")
-
     mlflow_host: str = Field(default=..., description="Name of the mlflow service container at runtime.")
-    mlflow_port: int = Field(default=..., description="Port on which the mlflow service runs.")
 
     # Not required: a fresh clone must start without anyone filling in a .env.
     # The default is the champion the training pipeline produces, which is the
@@ -49,7 +46,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def mlflow_server_uri(self) -> str:
-        return f"http://{self.mlflow_host}:{self.mlflow_port}"
+        return f"http://{self.mlflow_host}:5000"
 
     @computed_field
     @property
