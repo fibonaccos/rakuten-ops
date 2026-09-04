@@ -49,11 +49,13 @@ def test_a_page_renders(page: str, who: str, session: dict) -> None:
     assert not app.exception, f"{page} a levé une exception pour un {who}"
 
 
-def test_the_app_opens_on_the_login_page() -> None:
+def test_the_app_opens_on_the_home_page() -> None:
+    """Accueil is the default page (st.Page(..., default=True) in app.py) --
+    a visitor lands on the catalogue, not on the login screen."""
     app = open_app(VISITOR)
 
     assert not app.exception
-    assert any("Se connecter" in title.value for title in app.title)
+    assert any("Top des produits" in subheader.value for subheader in app.subheader)
 
 
 def test_the_sell_page_asks_a_visitor_to_log_in_first() -> None:
